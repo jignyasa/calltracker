@@ -18,3 +18,19 @@ enum class ClassificationSource {
     DEVICE_CONTACT,
     NONE,
 }
+
+/** Inputs to [com.example.calltracker.domain.usecase.ClassifyCallUseCase]. */
+data class ClassificationSignals(
+    /** The user's per-number rule, if any. */
+    val userRule: Classification? = null,
+    val crmMatch: CrmMatch? = null,
+    /** The call used the SIM the user marked as their work SIM. */
+    val isOnWorkSim: Boolean = false,
+    /** The number is saved in the phone's own contacts. */
+    val isDeviceContact: Boolean = false,
+)
+
+data class ClassificationDecision(
+    val classification: Classification,
+    val source: ClassificationSource,
+)

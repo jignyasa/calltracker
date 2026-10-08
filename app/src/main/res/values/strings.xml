@@ -1,4 +1,26 @@
 <resources>
     <string name="app_name">CallTracker</string>
     <string name="empty_calls">No calls yet</string>
+
+    <string name="permission_title">Allow call access</string>
+    <string name="permission_rationale">CallTracker reads your call log to find calls with customers. Personal calls stay on this phone and are never uploaded.</string>
+    <string name="permission_grant">Allow</string>
+    <string name="permission_open_settings">Open settings</string>
+
+    <string name="call_private_number">Private number</string>
+    <string name="call_subtitle">%1$s · %2$s · %3$s</string>
+    <string name="duration_seconds">%1$ds</string>
+    <string name="duration_minutes">%1$dm %2$02ds</string>
+
+    <string name="call_type_incoming">Incoming</string>
+    <string name="call_type_outgoing">Outgoing</string>
+    <string name="call_type_missed">Missed</string>
+    <string name="call_type_rejected">Rejected</string>
+    <string name="call_type_blocked">Blocked</string>
+    <string name="call_type_voicemail">Voicemail</string>
+    <string name="call_type_other">Other</string>
+
+    <string name="classification_business">Business</string>
+    <string name="classification_personal">Personal</string>
+    <string name="classification_unclassified">Unsorted</string>
 </resources>

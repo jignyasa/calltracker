@@ -1,6 +1,7 @@
 package com.example.calltracker.di
 
 import android.content.Context
+import com.example.calltracker.data.calllog.AndroidCallLogSource
 import com.example.calltracker.data.local.AppDatabase
 import com.example.calltracker.data.local.AppDatabaseFactory
 import com.example.calltracker.data.local.security.DatabaseKeyProvider
@@ -10,11 +11,14 @@ import com.example.calltracker.data.repository.CallRepositoryImpl
 import com.example.calltracker.data.repository.NumberRuleRepositoryImpl
 import com.example.calltracker.data.repository.OutboxRepositoryImpl
 import com.example.calltracker.data.repository.RoomTransactionRunner
+import com.example.calltracker.data.repository.SweepStateRepositoryImpl
 import com.example.calltracker.domain.phone.PhoneNumberNormalizer
 import com.example.calltracker.domain.repository.ActivityRepository
+import com.example.calltracker.domain.repository.CallLogSource
 import com.example.calltracker.domain.repository.CallRepository
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
+import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
 import dagger.Module
@@ -42,6 +46,8 @@ object DatabaseModule {
 
     @Provides fun provideNumberRuleDao(db: AppDatabase) = db.numberRuleDao()
 
+    @Provides fun provideSweepStateDao(db: AppDatabase) = db.sweepStateDao()
+
     @Provides
     @Singleton
     fun providePhoneNumberNormalizer(): PhoneNumberNormalizer = LibPhoneNumberNormalizer()
@@ -64,4 +70,8 @@ abstract class RepositoryModule {
     @Binds abstract fun bindNumberRuleRepository(impl: NumberRuleRepositoryImpl): NumberRuleRepository
 
     @Binds abstract fun bindTransactionRunner(impl: RoomTransactionRunner): TransactionRunner
+
+    @Binds abstract fun bindSweepStateRepository(impl: SweepStateRepositoryImpl): SweepStateRepository
+
+    @Binds abstract fun bindCallLogSource(impl: AndroidCallLogSource): CallLogSource
 }

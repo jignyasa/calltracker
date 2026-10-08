@@ -3,6 +3,8 @@ package com.example.calltracker.domain.usecase
 import com.example.calltracker.domain.model.Classification.BUSINESS
 import com.example.calltracker.domain.model.Classification.PERSONAL
 import com.example.calltracker.domain.model.Classification.UNCLASSIFIED
+import com.example.calltracker.domain.model.ClassificationDecision
+import com.example.calltracker.domain.model.ClassificationSignals
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType

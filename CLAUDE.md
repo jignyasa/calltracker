@@ -34,7 +34,12 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
    Types: INCOMING, OUTGOING, MISSED, REJECTED (BLOCKED/VOICEMAIL handled explicitly). End time = start + duration.
 3. **Watermark-based catch-up sweep**: persist the last processed `CallLog._ID`/`DATE`; each sweep reads rows past the watermark,
    upserts them (deduped on CallLog id + date), and advances the watermark in the same transaction.
-   Runs on `BOOT_COMPLETED`, app open, PHONE_STATE idle, and a unique periodic worker, so a missed broadcast (OEM kill, Doze) never loses a call.
+   Runs on `BOOT_COMPLETED`/`MY_PACKAGE_REPLACED`, app open, PHONE_STATE idle, a WorkManager **content-URI trigger on
+   `CallLog.Calls.CONTENT_URI`** (`CallLogChangedWorker`, re-armed by every sweep), and an hourly unique periodic worker.
+   All of them only call `SweepScheduler`. The logic lives in `domain/usecase/SweepCallLogUseCase` (pages of 200, one transaction per page).
+4. First sweep backfills **7 days**. Device contacts (`CACHED_NAME` present) are classified PERSONAL unless a rule or CRM match says otherwise.
+5. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.
+   On the emulator: `adb emu gsm call <n>` / `gsm accept <n>` / `gsm cancel <n>`; outgoing calls via `adb shell am start -a android.intent.action.CALL -d tel:<n>`.
 
 ## Privacy (hard rule)
 - Every call is classified `BUSINESS`, `PERSONAL`, or `UNCLASSIFIED`.

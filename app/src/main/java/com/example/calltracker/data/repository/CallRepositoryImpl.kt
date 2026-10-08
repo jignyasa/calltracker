@@ -1,9 +1,12 @@
 package com.example.calltracker.data.repository
 
 import com.example.calltracker.data.local.dao.CallDao
+import com.example.calltracker.data.local.entity.CallEntity
 import com.example.calltracker.data.local.toDomain
+import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
+import com.example.calltracker.domain.model.ClassificationDecision
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.repository.CallRepository
 import kotlinx.coroutines.flow.Flow
@@ -21,6 +24,36 @@ class CallRepositoryImpl @Inject constructor(
     override fun observeCall(id: Long): Flow<CallRecord?> = dao.observeById(id).map { it?.toDomain() }
 
     override suspend fun getCall(id: Long): CallRecord? = dao.getById(id)?.toDomain()
+
+    override suspend fun insertIfNew(
+        entry: CallLogEntry,
+        normalizedNumber: String?,
+        decision: ClassificationDecision,
+        now: Long,
+    ): Long? {
+        val id = dao.insertIgnore(
+            CallEntity(
+                callLogId = entry.callLogId,
+                startedAt = entry.startedAt,
+                rawNumber = entry.rawNumber,
+                normalizedNumber = normalizedNumber,
+                deviceContactName = entry.cachedName,
+                type = entry.type,
+                durationSec = entry.durationSec,
+                phoneAccountId = entry.phoneAccountId,
+                simSlot = entry.simSlot,
+                classification = decision.classification,
+                classificationSource = decision.source,
+                crmType = null,
+                crmId = null,
+                crmName = null,
+                crmCompany = null,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+        return id.takeIf { it > 0 }
+    }
 
     override suspend fun setClassification(callId: Long, classification: Classification, source: ClassificationSource) {
         dao.updateClassification(callId, classification, source, clock.millis())
