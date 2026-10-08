@@ -15,7 +15,8 @@ Default-deny: anything not positively BUSINESS is never synced.
 ## Progress
 - [x] Phase 0: Foundation (2026-10-08)
 - [x] Phase 1: Mock CRM server (2026-10-08). 16 `node:test` tests; `scripts/demo.sh` walkthrough
-- [ ] Phase 2: Domain + data core
+- [x] Phase 2: Domain + data core (2026-10-09). 33 JVM tests (use cases, rules, normalizer, Room/Robolectric) + on-device encryption test
+- [ ] Phase 3: Call detection
 
 ## Phases
 

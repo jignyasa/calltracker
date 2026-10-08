@@ -7,7 +7,8 @@ Android take-home (spec: `docs/assignment.pdf`). Real-time call activity capture
 with strict privacy (personal calls never leave the device) and reliable offline-first sync.
 Build: AGP 9.2.1 with **built-in Kotlin** (no `kotlin-android` plugin applied in `:app`; the root applies it with
 `apply false` only to pin KGP 2.4.21), KSP for Hilt/Room codegen, compileSdk 37, targetSdk 36, minSdk 26, Java 17.
-Requires SDK build-tools 36.0.0 + platform `android-37.0`. Namespace/appId `com.example.calltracker`.
+Requires SDK build-tools 36.0.0 + platform `android-37.0`. The Gradle daemon runs on JDK 17 (`gradle/gradle-daemon-jvm.properties`).
+Namespace/appId `com.example.calltracker`.
 WorkManager's default initializer is removed in the manifest; `CallTrackerApp` provides the Hilt worker factory.
 Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phase unless asked.
 
@@ -38,14 +39,19 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 ## Privacy (hard rule)
 - Every call is classified `BUSINESS`, `PERSONAL`, or `UNCLASSIFIED`.
   Precedence: user per-number rule → CRM match (BUSINESS) → work-SIM setting → device contact not in CRM (PERSONAL) → UNCLASSIFIED (ask via post-call notification).
-- **Only `BUSINESS` calls may ever be inserted into the sync outbox.** Enforce it in one place (the enqueue use case) and cover it with tests.
-  PERSONAL/UNCLASSIFIED data never goes into any network DTO, log line, or analytics.
+- **Only `BUSINESS` calls may ever be inserted into the sync outbox.** `domain/usecase/SyncGate.reconcile()` is the *only* caller of
+  `OutboxRepository.enqueue`. Anything that changes a call's classification or activity must call `reconcile` inside the same
+  `TransactionRunner.run {}` block. PERSONAL/UNCLASSIFIED data never goes into any network DTO, log line, or analytics.
 - Reclassifying BUSINESS → PERSONAL before upload removes the pending outbox item.
+- Every BUSINESS call gets an activity (with its client UUID) and is queued immediately; notes added later re-arm the same item.
+- A per-number rule never overrides a call the user classified by hand (`ClassificationSource.USER_MANUAL`).
 - Never log raw phone numbers or notes (mask them). `android:allowBackup="false"`; DB excluded from data extraction.
 
 ## Sync (outbox pattern)
-- `outbox` rows: `clientId` (UUID generated once locally, **sent as `Idempotency-Key`**), status
-  (PENDING / IN_FLIGHT / SYNCED / FAILED_RETRYABLE / FAILED_PERMANENT), attempt count, last error, timestamps.
+- `outbox` rows (one per activity, keyed by `call_id`): `clientId` (UUID generated once locally, **sent as `Idempotency-Key`**), status
+  (PENDING / IN_FLIGHT / SYNCED / FAILED_RETRYABLE / FAILED_PERMANENT), `generation`, attempt count, last error, timestamps.
+- `generation` is bumped on every (re)enqueue. A worker marks an item SYNCED only if the generation it sent is still current,
+  so an edit made during an upload is never lost.
 - Batch upload; the server returns **per-item results**. Each item is updated on its own; one bad item never blocks the batch.
 - **Exponential backoff** (`BackoffPolicy.EXPONENTIAL`), constraint `NetworkType.CONNECTED`.
   4xx validation → permanent (surfaced in UI). 5xx/IO → retry. 409 → server id wins, notes merged by last-write timestamp.
@@ -63,12 +69,18 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 
 ## Conventions
 - Every dependency goes through the version catalog. Check current APIs/versions with Context7 before adding or upgrading one.
-- Tests: JUnit4, MockK/fakes, Turbine, `kotlinx-coroutines-test`, in-memory Room for DAOs, MockWebServer for API/sync,
-  `TestListenableWorkerBuilder` for workers. Keep `domain/` JVM-testable.
+- Tests: JUnit4, MockK/fakes, Turbine, `kotlinx-coroutines-test`, MockWebServer for API/sync, `TestListenableWorkerBuilder` for workers.
+  Keep `domain/` JVM-testable. `test/.../testing/FakeRepositories` implements every domain repository over shared in-memory state.
+- DAO tests run on Robolectric with an unencrypted in-memory Room DB and **`@Config(sdk = [34])`** (Robolectric needs JDK 21 for SDK 35+).
+  SQLCipher can't load under Robolectric; encryption is covered by `androidTest/.../EncryptedDatabaseTest`.
+- Room schemas are exported to `app/schemas/`. Bump the DB version and add a migration for any schema change.
+- `DatabaseKeyProvider`: if the Keystore-wrapped key can't be unwrapped, a new key is made and the DB is deleted
+  (calls are re-read from the CallLog).
 
 ## Commands (Windows: `gradlew.bat`, or `./gradlew` in Git Bash)
 - Build: `./gradlew assembleDebug` · Release APK: `./gradlew assembleRelease`
 - Unit tests: `./gradlew testDebugUnitTest`
-- Single test: `./gradlew testDebugUnitTest --tests "com.example.calltracker.domain.SomeTest.someMethod"`
-- Instrumented tests: `./gradlew connectedDebugAndroidTest` · Lint: `./gradlew lintDebug`
+- Single test: `./gradlew testDebugUnitTest --tests "com.example.calltracker.domain.usecase.SyncGateTest"`
+- Instrumented tests: `./gradlew connectedDebugAndroidTest` (pick a device with `ANDROID_SERIAL=emulator-5554`; AVD with an installed image: `Pixel_7_API_31`)
+- Lint: `./gradlew lintDebug`
 - Mock server: `cd mock-server && npm install && npm start` (port 3000) · tests: `npm test` · single test: `node --test --test-name-pattern="DUPLICATE" "test/**/*.test.js"`
