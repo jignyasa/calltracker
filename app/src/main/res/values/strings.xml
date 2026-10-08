@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">CallTracker</string>
+    <string name="empty_calls">No calls yet</string>
+</resources>
