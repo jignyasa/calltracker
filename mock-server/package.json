@@ -1,0 +1,19 @@
+{
+  "name": "calltracker-mock-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mock CRM API for the CallTracker Android app (lookup, create lead, idempotent batch activity upload, fault injection).",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "express": "5.2.1"
+  }
+}

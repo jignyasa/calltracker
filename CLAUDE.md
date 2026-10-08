@@ -53,10 +53,13 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 - When a worker starts, reset stale `IN_FLIGHT` rows to PENDING (crash recovery).
 
 ## Mock CRM server
-- `/mock-server` (Node + Express, in-memory + JSON file persistence).
-- Endpoints: lead/contact lookup by phone, create lead, batch-upload activities (honours `Idempotency-Key`, returns per-item results).
-- Fault injection (latency, random 5xx, forced 409) via query/env flags.
-- App base URL comes from `BuildConfig` (`http://10.0.2.2:3000/` for the emulator).
+- `/mock-server` (Node + Express 5, CommonJS, no deps beyond express; tests use `node:test`).
+  `src/app.js` holds all routes; `mock-server/README.md` is the **API contract**. Keep app DTOs in sync with it.
+- `/api/v1` with `Authorization: Bearer dev-token`: `GET /contacts/lookup?phone=`, `POST /leads` (Idempotency-Key header),
+  `POST /activities/batch` (≤100 items; per-item status CREATED/DUPLICATE/UPDATED/CONFLICT/INVALID/ERROR; `clientId` is the item's idempotency key).
+  All times are epoch millis.
+- Faults: `X-Mock-Fault` header or `POST /__admin/faults` (latency, failureRate, itemFailureRate, forceStatus/forceCount).
+- App base URL comes from `BuildConfig.CRM_BASE_URL` (`http://10.0.2.2:3000/` on the emulator; physical device: `adb reverse tcp:3000 tcp:3000` + localhost).
 
 ## Conventions
 - Every dependency goes through the version catalog. Check current APIs/versions with Context7 before adding or upgrading one.
@@ -68,4 +71,4 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 - Unit tests: `./gradlew testDebugUnitTest`
 - Single test: `./gradlew testDebugUnitTest --tests "com.example.calltracker.domain.SomeTest.someMethod"`
 - Instrumented tests: `./gradlew connectedDebugAndroidTest` · Lint: `./gradlew lintDebug`
-- Mock server: `cd mock-server && npm install && npm start` (port 3000)
+- Mock server: `cd mock-server && npm install && npm start` (port 3000) · tests: `npm test` · single test: `node --test --test-name-pattern="DUPLICATE" "test/**/*.test.js"`
