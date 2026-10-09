@@ -37,14 +37,19 @@ class CrmLookupScheduler @Inject constructor(
         workManager.enqueueUniqueWork(AFTER_SWEEP, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 
-    /** Lookups still pending (offline, CRM down, or more numbers than one run handles): retry once online. */
+    /**
+     * Lookups still pending (offline, CRM down, or more numbers than one run handles): retry once online.
+     * REPLACE, not KEEP: after a long outage the old retry may be in exponential backoff for many minutes; a new call
+     * is a reason to try again soon, so the cadence restarts at [BACKOFF_SECONDS]. Lookups are idempotent, so
+     * replacing a run in progress is harmless.
+     */
     fun scheduleRetry() {
         val request = OneTimeWorkRequestBuilder<CrmLookupWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .addTag(TAG)
             .build()
-        workManager.enqueueUniqueWork(RETRY, ExistingWorkPolicy.KEEP, request)
+        workManager.enqueueUniqueWork(RETRY, ExistingWorkPolicy.REPLACE, request)
     }
 
     companion object {

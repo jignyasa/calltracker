@@ -108,7 +108,7 @@ All background work is **WorkManager** (`CoroutineWorker`), always **unique work
 |---|---|---|---|
 | `CallLogSweepWorker` | PHONE_STATE idle (+3 s), boot, app update, app open, content trigger, hourly periodic | unique `APPEND_OR_REPLACE`; periodic `KEEP` | Imports new CallLog rows; schedules CRM lookup |
 | `CallLogChangedWorker` | Content-URI trigger on `CallLog.Calls.CONTENT_URI` (re-armed after every sweep) | unique `REPLACE` | Requests a sweep (catches calls even when PHONE_STATE was suppressed) |
-| `CrmLookupWorker` | After a sweep that imported calls (no network constraint, so prompts aren't delayed); retry work needs `CONNECTED` | `APPEND_OR_REPLACE` / retry `KEEP`, exponential backoff | Looks up numbers, reclassifies, posts/cancels prompts |
+| `CrmLookupWorker` | After a sweep that imported calls (no network constraint, so prompts aren't delayed); retry work needs `CONNECTED` | `APPEND_OR_REPLACE` / retry `REPLACE` (a new call restarts the backoff), exponential backoff | Looks up numbers, reclassifies, posts/cancels prompts |
 | `SyncWorker` | Every enqueue (5 s debounce), app start, hourly periodic; **Upload now** | `CONNECTED`, exponential backoff 30 s; `APPEND_OR_REPLACE` (Upload now: `REPLACE`) | Uploads the outbox |
 
 ## Storage

@@ -341,3 +341,12 @@ Run after Phase 6 was committed, to cover what had only been unit-tested. All pa
   - `CallTracker-1.0-emulator.apk`: CRM at `10.0.2.2:3000`
   - `CallTracker-1.0-device.apk`: CRM at `localhost:3000` via `adb reverse`
 - **`TEST_REPORT_PHASE3.md`:** now notes which of its findings were fixed later.
+
+---
+
+## Real business call, end to end (2026-10-09)
+A real dialled call on the A50 to a number added to the CRM as lead "Test Customer":
+- The **outgoing call** (SIM 2) was imported 7 s after dialling. The person called back, and that **real incoming call** (answered, 9 s) was imported 4 s after it ended. This was the first real incoming call tested.
+- The number is a saved phone contact, so both calls were first **Personal**. Once the CRM lookup ran, "in the CRM" outranked "saved contact": both, plus 4 earlier calls with that number from the last 7 days, became **Business**, were linked to `lead_00003` and uploaded.
+- A note added in the app reached the CRM as version 2. The number appeared in 0 app log lines.
+- **Fixed:** the first lookup failed because the USB port forward had dropped. Its retry was queued behind an older CRM-lookup retry job whose backoff had grown to about 12 minutes during the day's outage tests. `CrmLookupScheduler.scheduleRetry` now **replaces** that job, so a new call restarts the backoff at 30 s.
