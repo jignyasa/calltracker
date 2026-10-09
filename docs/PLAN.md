@@ -21,7 +21,7 @@ Default-deny: anything not positively BUSINESS is never synced.
 - [x] Phase 5: UI (2026-10-09). 97 JVM tests (23 ViewModel/Turbine); full manual run-through on the A50; fixed SIM-slot mapping on Samsung (Telecom phone accounts). Details: `docs/IMPLEMENTATION_NOTES.md`
 - [x] Phase 6: Sync engine (2026-10-09). 122 JVM tests; on the A50 against the mock CRM: upload, UPDATED, 503 backoff, item ERROR, conflict, stale CRM link healing, clock-skew fix; personal calls never sent. Details: `docs/IMPLEMENTATION_NOTES.md`
 - [x] Phase 7: Hardening (2026-10-09). Lint 0/0 with warningsAsErrors; R8 release APK (10.5 MB) smoke-tested on the A50 with a 65-call backlog; paged call list; OEM battery guidance; log hygiene test. 130 JVM tests
-- [ ] Phase 8: Docs & delivery
+- [x] Phase 8: Docs & delivery (2026-10-09). README, ARCHITECTURE, DECISIONS (incl. assumptions, limitations, future), TESTING; release APKs in `dist/`
 
 ## Phases
 

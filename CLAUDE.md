@@ -12,6 +12,8 @@ Namespace/appId `com.example.calltracker`.
 WorkManager's default initializer is removed in the manifest; `CallTrackerApp` provides the Hilt worker factory.
 Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phase unless asked.
 What each finished phase built and how it was verified: `docs/IMPLEMENTATION_NOTES.md` (add a section per phase).
+Reviewer-facing docs: `README.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/TESTING.md` — keep them in step with the code.
+Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with and without `-PcrmBaseUrl=http://localhost:3000/`).
 
 ## Stack (do not substitute without asking)
 - **Language:** Kotlin only. **UI:** traditional XML layouts + ViewBinding (no Compose), Material Components.

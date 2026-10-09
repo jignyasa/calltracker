@@ -1,6 +1,8 @@
 # Test report: Phases 0–3 (device run)
 
 Date: 2026-10-09 · Device: Samsung Galaxy A50 (SM-A505F), Android 11 (API 30), dual SIM (Airtel + Jio)
+> **Status (2026-10-09, after Phase 7):** of the open findings in section 5, #3 (list scrolls to new calls), #4 ("1h 02m" durations), #5 (short codes show their number) and #6 (lint, now 0/0) are fixed; #1 (a short sweep burst per call) is kept by design as cheap and bounded; #2 (database opened on the main thread on first use) is documented in DECISIONS.md §7. The bug in section 4 is fixed, with a regression test and a DB migration.
+
 Scope: everything built through Phase 3. That is the XML/Hilt foundation, the mock CRM server, the domain and encrypted Room core, and call detection through the CallLog sweep.
 
 CRM matching, BUSINESS classification in the running app, notifications, the detail and rules screens, and network sync start in Phase 4. So on the device, every call shows as **Personal** (it has a contact name) or **Unsorted** (UNCLASSIFIED). Rule precedence and the outbox gate are covered by unit tests only.

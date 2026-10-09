@@ -325,3 +325,19 @@ Run after Phase 6 was committed, to cover what had only been unit-tested. All pa
 ### Known limitations
 - **Phone-maker screens** were verified on Samsung only. The others come from their published component names and fall back to the app's info page.
 - **The release APK is debug-signed** unless a keystore is configured.
+
+---
+
+## Phase 8: Docs and delivery (2026-10-09)
+
+- **`README.md`:** what the app does, setup (JDK 17, SDK, Node 20+), mock server, build and install for an emulator and for a physical phone (`adb reverse` + `-PcrmBaseUrl`), first run, the prebuilt APKs, commands, and a table mapping each assignment deliverable to its location.
+- **`docs/ARCHITECTURE.md`:** layers, the call-to-CRM pipeline, the privacy boundary, background work and storage, with Mermaid diagrams.
+- **`docs/DECISIONS.md`:**
+  - the business vs personal reasoning (asked for explicitly by the spec);
+  - detection, sync, storage and tech choices, with the alternatives considered;
+  - assumptions, known limitations and future improvements.
+- **`docs/TESTING.md`:** the test pyramid, how to run each level, what the 130 JVM and 2 on-device tests cover, and the device verification summary.
+- **`dist/`:** two R8 release APKs, debug-signed:
+  - `CallTracker-1.0-emulator.apk`: CRM at `10.0.2.2:3000`
+  - `CallTracker-1.0-device.apk`: CRM at `localhost:3000` via `adb reverse`
+- **`TEST_REPORT_PHASE3.md`:** now notes which of its findings were fixed later.
