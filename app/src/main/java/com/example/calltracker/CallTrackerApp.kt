@@ -3,6 +3,7 @@ package com.example.calltracker
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.example.calltracker.data.remote.CrmWarmUp
 import com.example.calltracker.sync.SweepScheduler
 import com.example.calltracker.sync.SyncScheduler
 import com.example.calltracker.ui.notifications.PostCallNotifier
@@ -28,11 +29,15 @@ class CallTrackerApp : Application(), Configuration.Provider {
     @Inject
     lateinit var syncScheduler: SyncScheduler
 
+    @Inject
+    lateinit var crmWarmUp: CrmWarmUp
+
     override fun onCreate() {
         super.onCreate()
         postCallNotifier.ensureChannel()
         sweepScheduler.ensureScheduled()
         syncScheduler.ensureScheduled()
+        crmWarmUp.wakeUp()
     }
 
     override val workManagerConfiguration: Configuration

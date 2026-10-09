@@ -93,14 +93,24 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
   number fails locally (FAILED_PERMANENT) and is never sent.
 
 ## Mock CRM server
-- `/mock-server` (Node + Express 5, CommonJS, no deps beyond express; tests use `node:test`).
+- `/mock-server` (Node + Express 5, CommonJS, deps: express + pg only; tests use `node:test`).
   `src/app.js` holds all routes; `mock-server/README.md` is the **API contract**. Keep app DTOs in sync with it.
+- Two stores, one **async** interface: `store.js` (memory / `data/db.json`, local) and `pgStore.js` (Postgres, when `DATABASE_URL`
+  is set = hosted mode). Lead requests and batch items run in `store.transaction(lockKey, fn)` (advisory lock per key);
+  uniqueness (lead phone, activity clientId, idempotency key) is enforced by the schema (`src/schema.sql`).
+  Hosted mode: faults off (`ENABLE_FAULTS`), `/__admin` only with `ADMIN_TOKEN`, per-IP rate limit. Never log a phone,
+  the admin key, or a DB error's message/detail (it quotes values); log codes only.
+- Deployed by `render.yaml` (Render free web service, `rootDir: mock-server`) on Neon Postgres. `npm test` also runs the API
+  suite on Postgres when `TEST_DATABASE_URL` is set (it truncates the tables).
 - `/api/v1` with `Authorization: Bearer dev-token`: `GET /contacts/lookup?phone=`, `POST /leads` (Idempotency-Key header),
   `POST /activities/batch` (≤100 items; per-item status CREATED/DUPLICATE/UPDATED/CONFLICT/INVALID/ERROR; `clientId` is the item's idempotency key).
   All times are epoch millis.
 - Faults: `X-Mock-Fault` header or `POST /__admin/faults` (latency, failureRate, itemFailureRate, forceStatus/forceCount).
 - App base URL comes from `BuildConfig.CRM_BASE_URL` (`http://10.0.2.2:3000/` on the emulator; physical device: `adb reverse tcp:3000 tcp:3000`
-  and build with `-PcrmBaseUrl=http://localhost:3000/`). Token: `BuildConfig.CRM_API_TOKEN` (`-PcrmApiToken`, default `dev-token`).
+  and build with `-PcrmBaseUrl=http://localhost:3000/`). **Release** builds default to the hosted
+  `https://calltracker-crm.onrender.com/` (`-PcrmReleaseBaseUrl` to change it; `-PcrmBaseUrl` overrides both).
+  Token: `BuildConfig.CRM_API_TOKEN` (`-PcrmApiToken`, default `dev-token`). `CrmWarmUp` pings `/health` at process start
+  (free host sleeps); OkHttp read timeout is 60 s for the same reason.
 
 ## Conventions
 - Every dependency goes through the version catalog. Check current APIs/versions with Context7 before adding or upgrading one.

@@ -10,6 +10,10 @@ import retrofit2.http.Query
 /** The CRM REST API (`/api/v1`, bearer auth added by an interceptor). Contract: mock-server/README.md. */
 interface CrmApi {
 
+    /** No auth needed; used only to wake a sleeping server ([CrmWarmUp]). */
+    @GET("health")
+    suspend fun health(): Response<Unit>
+
     @GET("api/v1/contacts/lookup")
     suspend fun lookup(@Query("phone") phone: String): Response<LookupResponse>
 

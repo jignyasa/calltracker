@@ -30,7 +30,8 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        // A free-tier hosted CRM (Render) sleeps when idle and takes up to about a minute to answer the first request.
+        .readTimeout(60, TimeUnit.SECONDS)
         .addInterceptor { chain ->
             chain.proceed(chain.request().newBuilder().header("Authorization", "Bearer ${BuildConfig.CRM_API_TOKEN}").build())
         }

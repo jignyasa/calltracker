@@ -43,6 +43,12 @@ android {
 
     buildTypes {
         release {
+            // Release builds talk to the hosted mock CRM (render.yaml) unless -PcrmBaseUrl points them elsewhere
+            // (e.g. http://localhost:3000/ for the USB/adb-reverse APK). Override the host with -PcrmReleaseBaseUrl.
+            val releaseBaseUrl = providers.gradleProperty("crmBaseUrl")
+                .orElse(providers.gradleProperty("crmReleaseBaseUrl"))
+                .getOrElse("https://calltracker-crm.onrender.com/")
+            buildConfigField("String", "CRM_BASE_URL", "\"$releaseBaseUrl\"")
             // The stable switches; AGP 9.2's `optimization {}` block still needs an experimental flag.
             isMinifyEnabled = true
             isShrinkResources = true
