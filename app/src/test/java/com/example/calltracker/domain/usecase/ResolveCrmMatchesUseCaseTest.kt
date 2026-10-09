@@ -6,6 +6,7 @@ import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.testing.FakeRepositories
+import com.example.calltracker.testing.TestUseCases
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,11 +24,9 @@ class ResolveCrmMatchesUseCaseTest {
     private val recent = now - TimeUnit.MINUTES.toMillis(5)
     private val clock = Clock.fixed(Instant.ofEpochMilli(now), ZoneOffset.UTC)
     private val repos = FakeRepositories()
-    private val syncGate = SyncGate(repos, repos, repos, clock)
-    private val reclassify = ReclassifyNumberUseCase(
-        repos, repos, repos, GatherClassificationSignals(repos, repos), ClassifyCallUseCase(), syncGate, repos,
-    )
-    private val resolve = ResolveCrmMatchesUseCase(repos, repos, reclassify, clock)
+    private val useCases = TestUseCases(repos, clock)
+    private val syncGate = useCases.syncGate
+    private val resolve = useCases.resolveCrm
 
     private val ananya = CrmMatch(CrmRecordType.CONTACT, "con_1", "Ananya Sharma", "Sharma Traders")
 

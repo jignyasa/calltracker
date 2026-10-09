@@ -2,6 +2,7 @@ package com.example.calltracker.di
 
 import android.content.Context
 import com.example.calltracker.data.calllog.AndroidCallLogSource
+import com.example.calltracker.data.device.AndroidSimCardSource
 import com.example.calltracker.data.local.AppDatabase
 import com.example.calltracker.data.local.AppDatabaseFactory
 import com.example.calltracker.data.local.security.DatabaseKeyProvider
@@ -22,6 +23,9 @@ import com.example.calltracker.domain.repository.CrmRepository
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.SettingsRepository
+import com.example.calltracker.domain.repository.SimCardSource
+import com.example.calltracker.sync.SweepRequester
+import com.example.calltracker.sync.SweepScheduler
 import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
@@ -84,4 +88,8 @@ abstract class RepositoryModule {
     @Binds abstract fun bindCrmRepository(impl: CrmRepositoryImpl): CrmRepository
 
     @Binds abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds abstract fun bindSimCardSource(impl: AndroidSimCardSource): SimCardSource
+
+    @Binds abstract fun bindSweepRequester(impl: SweepScheduler): SweepRequester
 }

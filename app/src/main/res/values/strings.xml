@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">CallTracker</string>
     <string name="empty_calls">No calls yet</string>
+    <string name="empty_calls_filtered">No calls match these filters</string>
 
     <string name="permission_title">Allow call access</string>
     <string name="permission_rationale">CallTracker reads your call log to find calls with customers. Personal calls stay on this phone and are never uploaded.</string>
@@ -9,8 +10,10 @@
 
     <string name="call_private_number">Private number</string>
     <string name="call_subtitle">%1$s · %2$s · %3$s</string>
+    <string name="call_subtitle_short">%1$s · %2$s</string>
     <string name="duration_seconds">%1$ds</string>
     <string name="duration_minutes">%1$dm %2$02ds</string>
+    <string name="duration_hours">%1$dh %2$02dm</string>
 
     <string name="call_type_incoming">Incoming</string>
     <string name="call_type_outgoing">Outgoing</string>
@@ -24,11 +27,136 @@
     <string name="classification_personal">Personal</string>
     <string name="classification_unclassified">Unsorted</string>
 
-    <string name="call_subtitle_short">%1$s · %2$s</string>
+    <string name="source_user_manual">Set by you</string>
+    <string name="source_user_rule">Your rule for this number</string>
+    <string name="source_crm_match">In CRM</string>
+    <string name="source_work_sim">Work SIM</string>
+    <string name="source_device_contact">Saved contact</string>
+    <string name="source_none">Not decided yet</string>
+
+    <string name="sync_not_queued">Not uploaded (stays on this phone)</string>
+    <string name="sync_pending">Waiting to upload</string>
+    <string name="sync_in_flight">Uploading…</string>
+    <string name="sync_synced">Uploaded to CRM</string>
+    <string name="sync_failed">Upload failed</string>
+    <string name="sync_failed_reason">Upload failed: %1$s</string>
+    <string name="sync_badge_pending">Pending</string>
+    <string name="sync_badge_synced">Synced</string>
+    <string name="sync_badge_failed">Failed</string>
+
+    <!-- Call list -->
+    <string name="filter_all">All</string>
+    <string name="filter_any_sync">Any status</string>
+    <string name="filter_sync_pending">Pending</string>
+    <string name="filter_sync_synced">Synced</string>
+    <string name="filter_sync_failed">Failed</string>
+    <string name="menu_rules">Number rules</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Call detail -->
+    <string name="title_call_detail">Call details</string>
+    <string name="detail_sim">SIM %1$d</string>
+    <string name="detail_crm">%1$s · %2$s</string>
+    <string name="detail_crm_lead">CRM lead</string>
+    <string name="detail_crm_contact">CRM contact</string>
+    <string name="detail_classification_header">Work or personal?</string>
+    <string name="detail_apply_to_number">Always for this number</string>
+    <string name="detail_already_uploaded">This call was already uploaded to the CRM. Marking it personal stops future updates but can\'t remove it there.</string>
+    <string name="detail_log_header">Call log</string>
+    <string name="detail_log_hint_not_business">Mark this call as Business to log notes for the CRM.</string>
+    <string name="detail_notes">Notes</string>
+    <string name="detail_outcome">Outcome</string>
+    <string name="detail_outcome_none">No outcome</string>
+    <string name="detail_follow_up">Follow-up date</string>
+    <string name="detail_follow_up_none">No follow-up</string>
+    <string name="detail_follow_up_clear">Clear</string>
+    <string name="detail_next_action">Next action</string>
+    <string name="detail_remarks">Remarks</string>
+    <string name="detail_save">Save</string>
+    <string name="detail_saved">Saved. It will be uploaded to the CRM.</string>
+    <plurals name="detail_too_long">
+        <item quantity="one">Too long (max %1$d character)</item>
+        <item quantity="other">Too long (max %1$d characters)</item>
+    </plurals>
+    <string name="detail_not_found">This call is no longer available.</string>
+    <string name="detail_create_lead">Create lead</string>
+    <string name="detail_unsaved_title">Discard changes?</string>
+    <string name="detail_unsaved_message">Your notes for this call aren\'t saved.</string>
+    <string name="detail_discard">Discard</string>
+    <string name="detail_keep_editing">Keep editing</string>
+
+    <!-- Create lead -->
+    <string name="lead_title">Create CRM lead</string>
+    <string name="lead_name">Name</string>
+    <string name="lead_company">Company (optional)</string>
+    <string name="lead_create">Create</string>
+    <string name="lead_created">Lead created: %1$s</string>
+    <string name="lead_already_exists">Already in CRM as %1$s</string>
+    <string name="lead_name_required">Enter a name</string>
+    <string name="lead_unavailable">Couldn\'t reach the CRM. Try again when you\'re online.</string>
+    <string name="lead_rejected">The CRM rejected this lead (%1$s)</string>
+    <string name="lead_no_number">This call has no number to save.</string>
+
+    <!-- Rules -->
+    <string name="title_rules">Number rules</string>
+    <string name="rules_empty">No rules yet. Use \"Always for this number\" on a call, or add one here.</string>
+    <string name="rules_explainer">A rule decides every call from that number, except calls you marked yourself.</string>
+    <string name="rules_add">Add rule</string>
+    <string name="rules_number">Phone number</string>
+    <string name="rules_invalid_number">Not a valid phone number</string>
+    <string name="rules_always_business">Always business</string>
+    <string name="rules_always_personal">Always personal</string>
+    <string name="rules_switch_to_business">Make business</string>
+    <string name="rules_switch_to_personal">Make personal</string>
+    <string name="rules_delete">Delete rule</string>
+    <string name="rules_options">Rule options</string>
+    <plurals name="rules_saved">
+        <item quantity="one">Rule saved · %1$d call updated</item>
+        <item quantity="other">Rule saved · %1$d calls updated</item>
+    </plurals>
+    <plurals name="rules_deleted">
+        <item quantity="one">Rule deleted · %1$d call updated</item>
+        <item quantity="other">Rule deleted · %1$d calls updated</item>
+    </plurals>
+    <string name="rules_since">Added %1$s</string>
+
+    <!-- Settings -->
+    <string name="title_settings">Settings</string>
+    <string name="settings_work_sim">Work SIM</string>
+    <string name="settings_work_sim_summary">Calls on this SIM count as business unless a rule says otherwise. Applies to the last 7 days and new calls.</string>
+    <string name="settings_work_sim_none">No work SIM</string>
+    <string name="settings_sim_label">SIM %1$d · %2$s</string>
+    <string name="settings_sim_label_unnamed">SIM %1$d</string>
+    <string name="settings_no_sims">No SIM found (or phone access not allowed).</string>
+    <plurals name="settings_work_sim_updated">
+        <item quantity="one">Work SIM updated · %1$d call updated</item>
+        <item quantity="other">Work SIM updated · %1$d calls updated</item>
+    </plurals>
+    <string name="settings_notifications">After-call questions</string>
+    <string name="settings_notifications_on">On. You\'re asked about calls from unknown numbers.</string>
+    <string name="settings_notifications_off">Off. Allow notifications to be asked after calls from unknown numbers.</string>
+    <string name="settings_battery">Background reliability</string>
+    <string name="settings_battery_ok">Battery optimisation is off for CallTracker. Calls are picked up reliably.</string>
+    <string name="settings_battery_restricted">Battery optimisation may delay picking up calls. Turn it off for CallTracker.</string>
+    <string name="settings_open">Open settings</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_privacy_text">Only calls marked Business are uploaded. Personal and unsorted calls, contact names and the call log itself never leave this phone. The CRM is asked only whether a number is a customer.</string>
+
+    <!-- Notifications -->
     <string name="notification_channel_post_call">After-call questions</string>
     <string name="notification_channel_post_call_description">Asks whether a call with an unknown number was a work call</string>
     <string name="post_call_title">Work call?</string>
     <string name="post_call_text">%1$s · %2$s</string>
     <string name="post_call_public_text">Was your last call a work call?</string>
     <string name="post_call_action_log">Log</string>
+
+    <string name="outcome_interested">Interested</string>
+    <string name="outcome_not_interested">Not interested</string>
+    <string name="outcome_call_back">Call back</string>
+    <string name="outcome_no_answer">No answer</string>
+    <string name="outcome_wrong_number">Wrong number</string>
+    <string name="outcome_converted">Converted</string>
+    <string name="outcome_other">Other</string>
+
+    <string name="cancel">Cancel</string>
 </resources>

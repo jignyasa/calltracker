@@ -1,6 +1,8 @@
 package com.example.calltracker.data.local.dao
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -8,13 +10,29 @@ import com.example.calltracker.data.local.entity.CallEntity
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CrmRecordType
+import com.example.calltracker.domain.model.SyncStatus
 import kotlinx.coroutines.flow.Flow
+
+/** A call joined with its outbox row's status (null when not queued). */
+data class CallWithSync(
+    @Embedded val call: CallEntity,
+    @ColumnInfo(name = "sync_status") val syncStatus: SyncStatus?,
+)
 
 @Dao
 interface CallDao {
 
     @Query("SELECT * FROM calls ORDER BY started_at DESC")
     fun observeAll(): Flow<List<CallEntity>>
+
+    @Query(
+        "SELECT c.*, o.status AS sync_status FROM calls c LEFT JOIN outbox o ON o.call_id = c.id " +
+            "ORDER BY c.started_at DESC",
+    )
+    fun observeListWithSync(): Flow<List<CallWithSync>>
+
+    @Query("SELECT * FROM calls WHERE started_at >= :since ORDER BY started_at DESC")
+    suspend fun getSince(since: Long): List<CallEntity>
 
     @Query("SELECT * FROM calls WHERE id = :id")
     fun observeById(id: Long): Flow<CallEntity?>

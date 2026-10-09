@@ -3,18 +3,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:minHeight="72dp"
     android:orientation="horizontal"
     android:paddingHorizontal="16dp"
     android:paddingVertical="8dp">
 
+    <!-- contentDescription is the call type, set in CallAdapter. -->
     <ImageView
         android:id="@+id/typeIcon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:importantForAccessibility="yes"
+        tools:ignore="ContentDescription"
         tools:src="@android:drawable/sym_call_incoming" />
 
     <LinearLayout
@@ -43,13 +44,29 @@
             tools:text="Outgoing · 5 min ago · 1m 20s" />
     </LinearLayout>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/classification"
-        style="@style/Widget.Material3.Chip.Assist"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:clickable="false"
-        android:focusable="false"
-        tools:text="Business" />
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/classification"
+            style="@style/Widget.Material3.Chip.Assist"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clickable="false"
+            android:focusable="false"
+            tools:text="Business" />
+
+        <TextView
+            android:id="@+id/syncBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:visibility="gone"
+            tools:text="Pending"
+            tools:visibility="visible" />
+    </LinearLayout>
 </LinearLayout>

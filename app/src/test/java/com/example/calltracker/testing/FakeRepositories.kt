@@ -2,6 +2,7 @@ package com.example.calltracker.testing
 
 import com.example.calltracker.domain.model.Activity
 import com.example.calltracker.domain.model.ActivityLog
+import com.example.calltracker.domain.model.CallListEntry
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.CallType
@@ -76,13 +77,27 @@ class FakeRepositories :
         return call
     }
 
-    fun markSynced(callId: Long) {
-        outbox[callId] = outbox.getValue(callId).copy(status = SyncStatus.SYNCED)
+    fun markSynced(callId: Long) = setSyncStatus(callId, SyncStatus.SYNCED)
+
+    fun setSyncStatus(callId: Long, status: SyncStatus) {
+        outbox[callId] = outbox.getValue(callId).copy(status = status)
+        outboxVersion.value++
     }
 
     // CallRepository
     override fun observeCalls(): Flow<List<CallRecord>> = calls.map { it.values.toList() }
     override fun observeCall(id: Long): Flow<CallRecord?> = calls.map { it[id] }
+
+    /** Shared with the outbox map: re-emits when [outboxVersion] is bumped by enqueue/remove. */
+    private val outboxVersion = MutableStateFlow(0)
+
+    override fun observeCallList(): Flow<List<CallListEntry>> =
+        kotlinx.coroutines.flow.combine(calls, outboxVersion) { map, _ ->
+            map.values.sortedByDescending { it.startedAt }.map { CallListEntry(it, outbox[it.id]?.status) }
+        }
+
+    override suspend fun getCallsSince(since: Long): List<CallRecord> =
+        calls.value.values.filter { it.startedAt >= since }.sortedByDescending { it.startedAt }
     override suspend fun getCall(id: Long): CallRecord? = calls.value[id]
 
     override suspend fun insertIfNew(
@@ -175,10 +190,12 @@ class FakeRepositories :
     override suspend fun enqueue(callId: Long, clientId: String, now: Long) {
         val existing = outbox[callId]
         outbox[callId] = OutboxItem(clientId, SyncStatus.PENDING, (existing?.generation ?: 0) + 1)
+        outboxVersion.value++
     }
 
     override suspend fun removeUnsynced(callId: Long) {
         if (outbox[callId]?.status != SyncStatus.SYNCED) outbox.remove(callId)
+        outboxVersion.value++
     }
 
     // NumberRuleRepository

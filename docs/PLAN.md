@@ -18,7 +18,8 @@ Default-deny: anything not positively BUSINESS is never synced.
 - [x] Phase 2: Domain + data core (2026-10-09). 33 JVM tests (use cases, rules, normalizer, Room/Robolectric) + on-device encryption test
 - [x] Phase 3: Call detection (2026-10-09). 42 JVM tests; emulator check: missed, incoming, outgoing, and a call after process kill all imported
 - [x] Phase 4: Matching + classification (2026-10-09). 74 JVM tests; on device (A50): CRM match upgrades a saved contact to BUSINESS, unknown → prompt, Business/Personal/Log actions, offline prompt + retry resolves once the CRM is back
-- [ ] Phase 5: UI
+- [x] Phase 5: UI (2026-10-09). 97 JVM tests (23 ViewModel/Turbine); full manual run-through on the A50; fixed SIM-slot mapping on Samsung (Telecom phone accounts). Details: `docs/IMPLEMENTATION_NOTES.md`
+- [ ] Phase 6: Sync engine
 
 ## Phases
 

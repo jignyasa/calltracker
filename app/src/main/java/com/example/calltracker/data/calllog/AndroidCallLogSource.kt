@@ -4,9 +4,13 @@ import android.Manifest
 import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.CallLog
+import android.telecom.TelecomManager
 import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import com.example.calltracker.di.IoDispatcher
@@ -99,8 +103,10 @@ class AndroidCallLogSource @Inject constructor(
     }
 
     /**
-     * Maps CallLog `PHONE_ACCOUNT_ID` to a SIM slot. OEMs store either the subscription id or the ICCID there,
-     * so both are indexed. Empty when READ_PHONE_STATE is missing.
+     * Maps CallLog `PHONE_ACCOUNT_ID` to a SIM slot. OEMs store either the subscription id or the ICCID there.
+     * Apps can't read ICCIDs on Android 10+, so on API 30+ the call-capable phone accounts (whose handle ids are
+     * exactly what the CallLog stores) are resolved to subscriptions through Telecom; that's what makes Samsung,
+     * which stores the ICCID, work. Empty when READ_PHONE_STATE is missing.
      */
     private fun simSlotsByAccountId(): Map<String, Int> {
         if (!granted(Manifest.permission.READ_PHONE_STATE)) return emptyMap()
@@ -110,12 +116,28 @@ class AndroidCallLogSource @Inject constructor(
         } catch (_: SecurityException) {
             return emptyMap()
         }
+        val slotBySubId = subscriptions.associate { it.subscriptionId to it.simSlotIndex }
         return buildMap {
             for (info in subscriptions) {
                 put(info.subscriptionId.toString(), info.simSlotIndex)
                 @Suppress("DEPRECATION")
                 info.iccId?.takeIf { it.isNotBlank() }?.let { put(it, info.simSlotIndex) }
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) putAll(slotsByPhoneAccount(slotBySubId))
+        }
+    }
+
+    /** Caller has checked READ_PHONE_STATE; a revoke in between surfaces as SecurityException. */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun slotsByPhoneAccount(slotBySubId: Map<Int, Int>): Map<String, Int> {
+        val telecom = context.getSystemService(TelecomManager::class.java) ?: return emptyMap()
+        val telephony = context.getSystemService(TelephonyManager::class.java) ?: return emptyMap()
+        return try {
+            telecom.callCapablePhoneAccounts.mapNotNull { handle ->
+                slotBySubId[telephony.getSubscriptionId(handle)]?.let { slot -> handle.id to slot }
+            }.toMap()
+        } catch (_: SecurityException) {
+            emptyMap()
         }
     }
 

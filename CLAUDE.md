@@ -11,11 +11,17 @@ Requires SDK build-tools 36.0.0 + platform `android-37.0`. The Gradle daemon run
 Namespace/appId `com.example.calltracker`.
 WorkManager's default initializer is removed in the manifest; `CallTrackerApp` provides the Hilt worker factory.
 Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phase unless asked.
+What each finished phase built and how it was verified: `docs/IMPLEMENTATION_NOTES.md` (add a section per phase).
 
 ## Stack (do not substitute without asking)
 - **Language:** Kotlin only. **UI:** traditional XML layouts + ViewBinding (no Compose), Material Components.
 - **Architecture:** MVVM + Clean Architecture, single `:app` module, packages:
   - `ui/`: Activities/Fragments, ViewModels, adapters. ViewModels expose `StateFlow<UiState>`; one-off events via `Channel`/`SharedFlow`.
+    Single activity; screens are fragments pushed through `AppNavigator` (`MainActivity`, plain transactions, no nav library).
+    Each screen sets its title with `requireActivity().setTitle(...)` (the toolbar has no `app:title`, which would block it).
+    Dialogs that return data are `DialogFragment`s + Fragment Result API (survive rotation). Forms keep their draft in the
+    ViewModel and refill fields only when `formVersion` changes, so the user's typing is never overwritten.
+    ViewModels depend on interfaces (e.g. `SweepRequester`, `SimCardSource`), never on Android classes, so they test on the JVM.
   - `domain/`: pure Kotlin. Models, repository **interfaces**, use cases. No `android.*` imports.
   - `data/`: Room DB, DAOs, entities, Retrofit APIs, DTOs, mappers, repository implementations, CallLog reader.
   - `sync/`: WorkManager workers + scheduling · `telephony/`: receivers + call detection · `di/`: Hilt modules.
@@ -30,7 +36,8 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 
 ## Call detection
 1. `PHONE_STATE` BroadcastReceiver is **only a trigger**. It reads no call data. On `IDLE` it enqueues a one-shot sweep (short delay so CallLog commits).
-2. **CallLog is the source of truth** for number, type, start, duration, SIM (`PHONE_ACCOUNT_ID`).
+2. **CallLog is the source of truth** for number, type, start, duration, SIM (`PHONE_ACCOUNT_ID` → slot via subscription id, ICCID,
+   or on API 30+ Telecom phone accounts; Samsung stores the ICCID, which apps can't read on Android 10+).
    Types: INCOMING, OUTGOING, MISSED, REJECTED (BLOCKED/VOICEMAIL handled explicitly). End time = start + duration.
 3. **Watermark-based catch-up sweep**: persist the last processed `CallLog._ID`/`DATE`; each sweep reads rows past the watermark,
    upserts them (deduped on CallLog id + date), and advances the watermark in the same transaction.
@@ -86,7 +93,10 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 ## Conventions
 - Every dependency goes through the version catalog. Check current APIs/versions with Context7 before adding or upgrading one.
 - Tests: JUnit4, MockK/fakes, Turbine, `kotlinx-coroutines-test`, MockWebServer for API/sync, `TestListenableWorkerBuilder` for workers.
-  Keep `domain/` JVM-testable. `test/.../testing/FakeRepositories` implements every domain repository over shared in-memory state.
+  Keep `domain/` JVM-testable. `test/.../testing/FakeRepositories` implements every domain repository over shared in-memory state;
+  `testing/TestUseCases` wires every use case over it; ViewModel tests use `testing/MainDispatcherRule` (create the ViewModel inside
+  the test, not in a property initializer, or `viewModelScope` is built before the test Main dispatcher is installed).
+  Rule/classification changes go through `CallReclassifier` (never overrides USER_MANUAL; reconciles the outbox).
 - DAO tests run on Robolectric with an unencrypted in-memory Room DB and **`@Config(sdk = [34])`** (Robolectric needs JDK 21 for SDK 35+).
   SQLCipher can't load under Robolectric; encryption is covered by `androidTest/.../EncryptedDatabaseTest`.
 - Room schemas are exported to `app/schemas/`. Bump the DB version and add a migration (`data/local/Migrations.kt`, `ALL_MIGRATIONS`)

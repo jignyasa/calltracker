@@ -1,5 +1,6 @@
 package com.example.calltracker.domain.repository
 
+import com.example.calltracker.domain.model.CallListEntry
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
@@ -10,6 +11,11 @@ import kotlinx.coroutines.flow.Flow
 
 interface CallRepository {
     fun observeCalls(): Flow<List<CallRecord>>
+
+    /** Newest first, each with its sync state. */
+    fun observeCallList(): Flow<List<CallListEntry>>
+
+    suspend fun getCallsSince(since: Long): List<CallRecord>
 
     fun observeCall(id: Long): Flow<CallRecord?>
 

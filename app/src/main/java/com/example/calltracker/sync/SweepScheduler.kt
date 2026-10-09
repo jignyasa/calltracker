@@ -17,14 +17,21 @@ import javax.inject.Singleton
  * Every way a CallLog sweep gets triggered. All of them use unique work, so a burst of triggers
  * (e.g. PHONE_STATE fired twice, plus the content trigger) collapses into at most one running and one queued sweep.
  */
+/** What screens need from the scheduler; an interface so ViewModels stay JVM-testable. */
+interface SweepRequester {
+    fun requestSweep()
+}
+
 @Singleton
 class SweepScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : SweepRequester {
     private val workManager get() = WorkManager.getInstance(context)
 
+    override fun requestSweep() = requestSweep(delaySeconds = 0)
+
     /** One-shot sweep. APPEND_OR_REPLACE: a sweep already running finishes, then another runs to catch rows it missed. */
-    fun requestSweep(delaySeconds: Long = 0) {
+    fun requestSweep(delaySeconds: Long) {
         val request = OneTimeWorkRequestBuilder<CallLogSweepWorker>()
             .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
             .addTag(TAG)

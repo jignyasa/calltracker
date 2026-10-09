@@ -7,6 +7,7 @@ import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.NewLead
 import com.example.calltracker.testing.FakeRepositories
+import com.example.calltracker.testing.TestUseCases
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -21,11 +22,7 @@ class CreateLeadFromCallUseCaseTest {
     private val now = 1_790_000_000_000L
     private val clock = Clock.fixed(Instant.ofEpochMilli(now), ZoneOffset.UTC)
     private val repos = FakeRepositories()
-    private val syncGate = SyncGate(repos, repos, repos, clock)
-    private val reclassify = ReclassifyNumberUseCase(
-        repos, repos, repos, GatherClassificationSignals(repos, repos), ClassifyCallUseCase(), syncGate, repos,
-    )
-    private val createLead = CreateLeadFromCallUseCase(repos, repos, reclassify, syncGate, repos, clock)
+    private val createLead = TestUseCases(repos, clock).createLead
 
     @Test
     fun `creating a lead makes the number's calls BUSINESS and queues them`() = runTest {

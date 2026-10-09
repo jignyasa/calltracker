@@ -17,12 +17,8 @@ import androidx.work.workDataOf
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
-import com.example.calltracker.domain.usecase.ClassifyCallUseCase
-import com.example.calltracker.domain.usecase.GatherClassificationSignals
-import com.example.calltracker.domain.usecase.ReclassifyNumberUseCase
-import com.example.calltracker.domain.usecase.ResolveCrmMatchesUseCase
-import com.example.calltracker.domain.usecase.SyncGate
 import com.example.calltracker.testing.FakeRepositories
+import com.example.calltracker.testing.TestUseCases
 import com.example.calltracker.ui.notifications.PostCallNotifier
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -57,11 +53,7 @@ class CrmLookupWorkerTest {
     }
 
     private fun worker(prompt: Boolean, callIds: LongArray, attempt: Int = 0): CrmLookupWorker {
-        val syncGate = SyncGate(repos, repos, repos, clock)
-        val reclassify = ReclassifyNumberUseCase(
-            repos, repos, repos, GatherClassificationSignals(repos, repos), ClassifyCallUseCase(), syncGate, repos,
-        )
-        val resolve = ResolveCrmMatchesUseCase(repos, repos, reclassify, clock)
+        val resolve = TestUseCases(repos, clock).resolveCrm
         return TestListenableWorkerBuilder<CrmLookupWorker>(context)
             .setInputData(workDataOf(CrmLookupWorker.KEY_PROMPT to prompt, CrmLookupWorker.KEY_CALL_IDS to callIds))
             .setRunAttemptCount(attempt)

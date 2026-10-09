@@ -3,6 +3,7 @@ package com.example.calltracker.data.repository
 import com.example.calltracker.data.local.dao.CallDao
 import com.example.calltracker.data.local.entity.CallEntity
 import com.example.calltracker.data.local.toDomain
+import com.example.calltracker.domain.model.CallListEntry
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
@@ -21,6 +22,11 @@ class CallRepositoryImpl @Inject constructor(
 ) : CallRepository {
 
     override fun observeCalls(): Flow<List<CallRecord>> = dao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    override fun observeCallList(): Flow<List<CallListEntry>> =
+        dao.observeListWithSync().map { list -> list.map { CallListEntry(it.call.toDomain(), it.syncStatus) } }
+
+    override suspend fun getCallsSince(since: Long): List<CallRecord> = dao.getSince(since).map { it.toDomain() }
 
     override fun observeCall(id: Long): Flow<CallRecord?> = dao.observeById(id).map { it?.toDomain() }
 
