@@ -80,10 +80,11 @@ notes on a business call, and watch it arrive at `GET http://localhost:3000/api/
 
 | File | Use with |
 |---|---|
+| **`CallTracker-1.0.apk`** | **Any phone with internet, nothing else needed.** CRM hosted at `https://calltracker-crm.onrender.com` (Render + Neon Postgres) |
 | `CallTracker-1.0-emulator.apk` | An emulator; mock CRM on the host at `10.0.2.2:3000` |
 | `CallTracker-1.0-device.apk` | A phone over USB with `adb reverse tcp:3000 tcp:3000` |
 
-Both are **release builds** (R8-shrunk, no debug tooling) signed with the Android debug key — install with
+All three are **release builds** (R8-shrunk, no debug tooling) signed with the Android debug key — install with
 `adb install dist/<file>.apk`. To sign with a real key, set `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`
 and `releaseKeyPassword` as Gradle properties (e.g. in `~/.gradle/gradle.properties`) and run `assembleRelease`.
 

@@ -125,3 +125,23 @@ be bothered as little as possible.
 - **Instrumented UI tests** (Espresso) for the main flows and a CI pipeline running unit tests, lint and a release build.
 - **More OEM coverage** (Tecno, Infinix, Lava) and an in-app "test background reliability" check.
 - **Analytics without personal data** (counts of syncs/failures) to monitor reliability across devices.
+
+## Hosting the mock CRM (Render + Neon)
+- **Why a hosted copy:** a reviewer must be able to install one APK and use it without our laptop.
+- **Why keep the REST API rather than have the app use Firebase directly:** the assignment is about integrating
+  with a CRM's API. The offline outbox, idempotent batch upload and per-item results are the Android work being
+  assessed, and a real CRM is always reached through an API.
+- **Why Postgres rather than Firestore:**
+  - the database enforces the uniqueness the sync relies on;
+  - plain transactions;
+  - no vendor-specific code;
+  - Neon's free tier needs no card and keeps data.
+- **Free-tier limits:**
+  - Render sleeps after ~15 min idle, so the first request takes up to ~1 min. The app warms it up at start and
+    waits 60 s, and lookups and uploads retry anyway.
+  - The shared `dev-token` stays; this is a demo.
+- **Production would add:**
+  - per-user auth;
+  - removing `/__admin`;
+  - monitoring and backups;
+  - usually a server in front of the company's real CRM.

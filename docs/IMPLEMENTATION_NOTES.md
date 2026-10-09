@@ -372,3 +372,40 @@ A check against the spec's "search the number when a call completes, link it, or
 - **On the A50:** a fake call-log row from an unknown number was marked Business. Its note uploaded with no
   lead (version 2). After **Create lead**, the same activity (same `clientId`, note kept) became version 3 with
   `leadId = lead_00004`. Still one activity for the number, and the number appeared in no app log line.
+
+---
+
+## Hosted CRM: Render + Neon (2026-10-10)
+Goal: share a fully working APK. Until now the CRM was reachable only from the laptop (`adb reverse` / emulator).
+- **Server:** the store sits behind one async interface. It uses memory/`db.json` locally and **Postgres** when
+  `DATABASE_URL` is set (`pgStore.js`, `schema.sql`):
+  - each record is JSONB, and the database enforces one lead per phone, one activity per `clientId` and one
+    response per Idempotency-Key;
+  - each lead request and each batch item runs in a transaction with an advisory lock on its key.
+- **Hosted mode:** faults off, `/__admin` needs `ADMIN_TOKEN`, 120 requests/min per IP. Logs mask `?phone=` and
+  `?key=` and record DB errors by code only (Postgres error details quote the values).
+- **Deploy:**
+  - `render.yaml`: free web service, Singapore, `rootDir: mock-server`;
+  - Neon free Postgres 18 in AWS ap-southeast-1, pooled connection with `sslmode=verify-full`;
+  - private GitHub repo `jignyasa/calltracker`;
+  - the laptop's data was copied with `scripts/import-json.js`: 3 contacts, 4 leads, 12 activities.
+- **App:**
+  - release builds default to `https://calltracker-crm.onrender.com/`;
+  - `CrmWarmUp` pings `/health` at process start, because the free service sleeps after ~15 min;
+  - OkHttp read timeout is 60 s;
+  - `dist/CallTracker-1.0.apk` added; the emulator and device APKs were rebuilt.
+- **Tests:** 42 server tests on memory and on a local Postgres 18, including racing duplicate leads and batches;
+  139 JVM tests; lint 0/0.
+- **Live checks:**
+  - `/health` answers;
+  - a lookup returns the imported Test Customer lead;
+  - 401 without the token or admin key;
+  - `X-Mock-Fault` is ignored;
+  - plain http redirects to https.
+
+  The cloud APK was installed on the A50 with the USB port forward removed.
+- **Real call on the cloud APK** (A50, no port forward):
+  - outgoing call to the Test Customer number;
+  - the pop-up opened and the note "Cloud test" was saved;
+  - the live server got `act_00013` linked to `lead_00003`: v1 for the call, then v2 with the note;
+  - the app showed Synced.
