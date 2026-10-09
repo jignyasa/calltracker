@@ -15,11 +15,13 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import androidx.work.workDataOf
 import com.example.calltracker.domain.model.Classification
+import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.testing.FakeRepositories
 import com.example.calltracker.testing.TestUseCases
 import com.example.calltracker.ui.notifications.PostCallNotifier
+import com.example.calltracker.ui.postcall.PostCallLogOffer
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,6 +45,14 @@ class CrmLookupWorkerTest {
     private val repos = FakeRepositories()
     private val notifier = PostCallNotifier(context)
     private val scheduler = CrmLookupScheduler(context)
+
+    /** Records the log-form offers (the real one starts PostCallActivity). */
+    private val offered = mutableListOf<Long>()
+    private val offers = object : PostCallLogOffer {
+        override fun offer(call: com.example.calltracker.domain.model.CallRecord) {
+            offered += call.id
+        }
+    }
     private val justNow = now - TimeUnit.MINUTES.toMillis(3)
 
     @Before
@@ -59,7 +69,7 @@ class CrmLookupWorkerTest {
             .setRunAttemptCount(attempt)
             .setWorkerFactory(object : WorkerFactory() {
                 override fun createWorker(appContext: Context, workerClassName: String, params: WorkerParameters): ListenableWorker =
-                    CrmLookupWorker(appContext, params, resolve, repos, notifier, scheduler, clock)
+                    CrmLookupWorker(appContext, params, resolve, repos, notifier, offers, scheduler, clock)
             })
             .build()
     }
@@ -112,5 +122,45 @@ class CrmLookupWorkerTest {
         worker(prompt = false, callIds = longArrayOf()).doWork()
 
         assertTrue(posted().isEmpty())
+        assertEquals("…and, now business, gets the log form", listOf(1L), offered)
+    }
+
+    @Test
+    fun `a business call that just ended gets the log form, not the question`() = runTest {
+        repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_1", "Test Customer", "Demo Pvt Ltd")
+        repos.addCall(1, number = "+919000000001", startedAt = justNow)
+
+        worker(prompt = true, callIds = longArrayOf(1)).doWork()
+
+        assertEquals(listOf(1L), offered)
+        assertTrue("no Work call? question for a CRM customer", posted().isEmpty())
+    }
+
+    @Test
+    fun `only the newest business call is offered - old and undecided ones are not`() = runTest {
+        repos.setRule("+919000000001", Classification.BUSINESS, now)
+        repos.setRule("+919000000002", Classification.BUSINESS, now)
+        repos.addCall(1, number = "+919000000001", startedAt = justNow - 60_000,
+            classification = Classification.BUSINESS, source = ClassificationSource.USER_RULE)
+        repos.addCall(2, number = "+919000000002", startedAt = justNow,
+            classification = Classification.BUSINESS, source = ClassificationSource.USER_RULE)
+        repos.addCall(3, number = "+919000000001", startedAt = now - TimeUnit.HOURS.toMillis(2),
+            classification = Classification.BUSINESS, source = ClassificationSource.USER_RULE)
+        repos.addCall(4, number = "+919000000004", startedAt = justNow) // unknown → question instead
+
+        worker(prompt = true, callIds = longArrayOf(1, 2, 3, 4)).doWork()
+
+        assertEquals(listOf(2L), offered)
+        assertEquals(listOf(4L), posted())
+    }
+
+    @Test
+    fun `a retried run never offers again`() = runTest {
+        repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_1", "Test Customer", null)
+        repos.addCall(1, number = "+919000000001", startedAt = justNow)
+
+        worker(prompt = true, callIds = longArrayOf(1), attempt = 1).doWork()
+
+        assertTrue(offered.isEmpty())
     }
 }

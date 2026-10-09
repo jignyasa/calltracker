@@ -144,51 +144,6 @@
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/syncChips"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            app:checkedChip="@id/chipSyncAny"
-            app:selectionRequired="true"
-            app:singleLine="true"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipSyncAny"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_any_sync" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipSyncPending"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_sync_pending" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipSyncSynced"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_sync_synced" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipSyncFailed"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_sync_failed" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
     <TextView
         android:id="@+id/uploadSummary"
         android:layout_width="match_parent"

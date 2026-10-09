@@ -1,6 +1,7 @@
 package com.example.calltracker.ui.calls
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -9,6 +10,8 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.MenuItemCompat
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -25,6 +28,7 @@ import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.ui.common.BackgroundRestrictions
 import com.example.calltracker.ui.navigator
 import com.example.calltracker.ui.permissions.CallPermissions
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -125,14 +129,10 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
                 Classification.UNCLASSIFIED -> R.id.chipUnclassified
             },
         )
-        binding.syncChips.check(
-            when (state.filter.sync) {
-                null -> R.id.chipSyncAny
-                SyncFilter.PENDING -> R.id.chipSyncPending
-                SyncFilter.SYNCED -> R.id.chipSyncSynced
-                SyncFilter.FAILED -> R.id.chipSyncFailed
-            },
-        )
+        if (state.filter.sync != shownSyncFilter) {
+            shownSyncFilter = state.filter.sync
+            requireActivity().invalidateMenu() // re-tint the filter icon
+        }
     }
 
     private fun bindFilters(binding: FragmentCallListBinding) {
@@ -146,16 +146,37 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
                 },
             )
         }
-        binding.syncChips.setOnCheckedStateChangeListener { _, checked ->
-            viewModel.setSyncFilter(
-                when (checked.firstOrNull()) {
-                    R.id.chipSyncPending -> SyncFilter.PENDING
-                    R.id.chipSyncSynced -> SyncFilter.SYNCED
-                    R.id.chipSyncFailed -> SyncFilter.FAILED
-                    else -> null
+    }
+
+    /** The status filter lives behind the toolbar's filter icon; the icon takes the accent colour while it's on. */
+    private var shownSyncFilter: SyncFilter? = null
+
+    private fun showStatusFilterMenu() {
+        // The menu item's own view, so the pop-up opens under the icon (left of the ⋮).
+        val anchor = requireActivity().findViewById<View>(R.id.action_status_filter)
+            ?: requireActivity().findViewById(R.id.toolbar) // very narrow screen: the icon went into the overflow
+        PopupMenu(requireContext(), anchor).apply {
+            menuInflater.inflate(R.menu.menu_status_filter, menu)
+            menu.findItem(
+                when (viewModel.state.value.filter.sync) {
+                    null -> R.id.status_any
+                    SyncFilter.PENDING -> R.id.status_pending
+                    SyncFilter.SYNCED -> R.id.status_synced
+                    SyncFilter.FAILED -> R.id.status_failed
                 },
-            )
-        }
+            ).isChecked = true
+            setOnMenuItemClickListener { item ->
+                viewModel.setSyncFilter(
+                    when (item.itemId) {
+                        R.id.status_pending -> SyncFilter.PENDING
+                        R.id.status_synced -> SyncFilter.SYNCED
+                        R.id.status_failed -> SyncFilter.FAILED
+                        else -> null
+                    },
+                )
+                true
+            }
+        }.show()
     }
 
     private fun addMenu() {
@@ -163,7 +184,19 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
             object : MenuProvider {
                 override fun onCreateMenu(menu: Menu, inflater: MenuInflater) = inflater.inflate(R.menu.menu_call_list, menu)
 
+                override fun onPrepareMenu(menu: Menu) {
+                    val active = shownSyncFilter != null
+                    val tint = MaterialColors.getColor(
+                        requireView(),
+                        if (active) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant,
+                    )
+                    menu.findItem(R.id.action_status_filter)?.let { item ->
+                        MenuItemCompat.setIconTintList(item, ColorStateList.valueOf(tint))
+                    }
+                }
+
                 override fun onMenuItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+                    R.id.action_status_filter -> true.also { showStatusFilterMenu() }
                     R.id.action_upload_now -> true.also {
                         viewModel.uploadNow()
                         binding?.let { Snackbar.make(it.root, R.string.upload_started, Snackbar.LENGTH_SHORT).show() }

@@ -52,6 +52,7 @@
     <string name="filter_sync_failed">Failed</string>
     <string name="menu_rules">Number rules</string>
     <string name="menu_upload_now">Upload now</string>
+    <string name="menu_status_filter">Filter by upload status</string>
     <string name="upload_started">Uploading when online…</string>
     <plurals name="upload_waiting">
         <item quantity="one">%1$d call waiting to upload</item>
@@ -178,6 +179,16 @@
     <string name="post_call_text">%1$s · %2$s</string>
     <string name="post_call_public_text">Was your last call a work call?</string>
     <string name="post_call_action_log">Log</string>
+    <string name="post_call_log_title">Call with %1$s</string>
+    <string name="post_call_log_public_title">Add notes for your last call</string>
+    <string name="post_call_add_notes">Add notes</string>
+    <string name="popup_skip">Skip</string>
+    <string name="popup_more">More details</string>
+    <string name="popup_saved">Saved. It will be uploaded to the CRM.</string>
+    <string name="settings_popup">After-call screen</string>
+    <string name="settings_popup_on">On. After a business call, the log form opens over whatever app you\'re in.</string>
+    <string name="settings_popup_off">Off. After a business call you get a notification instead. Allow \"Display over other apps\" so the log form opens by itself.</string>
+    <string name="settings_popup_allow">Allow display over other apps</string>
 
     <string name="outcome_interested">Interested</string>
     <string name="outcome_not_interested">Not interested</string>

@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Lets Settings show the system "stop optimising battery" prompt: call capture runs in the background. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- "Display over other apps": lets the log form pop up right after a business call (user-granted in Settings). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Phone makers' auto-start / background screens (ui/settings/OemBatteryGuide), visible on Android 11+. -->
     <queries>
@@ -72,6 +74,16 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Post-call pop-up: its own task, so it never brings the main app along and never shows in recents. -->
+        <activity
+            android:name=".ui.postcall.PostCallActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/Theme.CallTracker.PostCall"
+            android:windowSoftInputMode="adjustResize" />
 
         <receiver
             android:name=".ui.notifications.PostCallActionReceiver"

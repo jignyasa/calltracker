@@ -30,6 +30,8 @@ import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.sync.SweepRequester
 import com.example.calltracker.sync.SweepScheduler
 import com.example.calltracker.sync.SyncScheduler
+import com.example.calltracker.ui.postcall.PostCallLauncher
+import com.example.calltracker.ui.postcall.PostCallLogOffer
 import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
@@ -100,4 +102,6 @@ abstract class RepositoryModule {
     @Binds abstract fun bindSyncRequester(impl: SyncScheduler): SyncRequester
 
     @Binds abstract fun bindActivityUploader(impl: ActivityUploaderImpl): ActivityUploader
+
+    @Binds abstract fun bindPostCallLogOffer(impl: PostCallLauncher): PostCallLogOffer
 }

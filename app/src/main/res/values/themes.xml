@@ -8,4 +8,14 @@
     </style>
 
     <style name="Theme.CallTracker" parent="Base.Theme.CallTracker" />
+
+    <!-- Post-call pop-up: a dialog over whatever app is open, wide enough to type in comfortably. -->
+    <style name="Theme.CallTracker.PostCall" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowMinWidthMajor">90%</item>
+        <item name="android:windowMinWidthMinor">90%</item>
+    </style>
 </resources>

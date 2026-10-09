@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Shown in the toolbar just left of the overflow (⋮); opens a pop-up with the upload statuses. -->
+    <item
+        android:id="@+id/action_status_filter"
+        android:icon="@drawable/ic_filter"
+        android:title="@string/menu_status_filter"
+        app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_upload_now"
         android:title="@string/menu_upload_now"

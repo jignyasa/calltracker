@@ -71,6 +71,37 @@ class PostCallNotifier @Inject constructor(
         }
     }
 
+    /**
+     * "Call with Test Customer · Add notes" after a business call, when the log form can't pop up by itself (no
+     * "Display over other apps" permission). Same id as the "Work call?" prompt, so it replaces it for that call.
+     */
+    fun showLogPrompt(call: CallRecord) {
+        if (!canNotify()) return
+        val details = context.getString(
+            R.string.call_subtitle,
+            context.getString(Formatters.callTypeLabel(call.type)),
+            DateUtils.formatDateTime(context, call.startedAt, DateUtils.FORMAT_SHOW_TIME),
+            Formatters.duration(context, call.durationSec),
+        )
+        val publicVersion = baseBuilder()
+            .setContentTitle(context.getString(R.string.post_call_log_public_title))
+            .build()
+        val notification = baseBuilder()
+            .setContentTitle(context.getString(R.string.post_call_log_title, Formatters.displayName(context, call)))
+            .setContentText(details)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion)
+            .setContentIntent(openApp(call.id, logCall = true))
+            .addAction(0, context.getString(R.string.post_call_add_notes), openApp(call.id, logCall = true))
+            .setWhen(call.startedAt)
+            .build()
+        try {
+            manager.notify(NOTIFICATION_TAG, call.id.notificationId(), notification)
+        } catch (_: SecurityException) {
+            // Permission revoked between the check and the call.
+        }
+    }
+
     fun cancel(callId: Long) = manager.cancel(NOTIFICATION_TAG, callId.notificationId())
 
     private fun baseBuilder() = NotificationCompat.Builder(context, CHANNEL_ID)

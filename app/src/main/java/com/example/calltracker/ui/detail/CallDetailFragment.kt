@@ -16,23 +16,17 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentCallDetailBinding
 import com.example.calltracker.domain.model.ActivityLog
-import com.example.calltracker.domain.model.CallOutcome
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
+import com.example.calltracker.ui.common.FollowUpDatePicker
 import com.example.calltracker.ui.common.Formatters
-import com.google.android.material.datepicker.CalendarConstraints
-import com.google.android.material.datepicker.DateValidatorPointForward
-import com.google.android.material.datepicker.MaterialDatePicker
+import com.example.calltracker.ui.common.OutcomeChoices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZoneOffset
 
 @AndroidEntryPoint
 class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
@@ -44,7 +38,6 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
     private var rendering = false
     private var renderedFormVersion = -1
 
-    private val outcomes = listOf<CallOutcome?>(null) + CallOutcome.entries
 
     private val unsavedChangesGuard = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -112,16 +105,12 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.nextAction.watch(viewModel::onNextActionChanged)
         binding.remarks.watch(viewModel::onRemarksChanged)
 
-        binding.outcome.setAdapter(
-            ArrayAdapter(
-                requireContext(),
-                android.R.layout.simple_list_item_1,
-                outcomes.map { it?.let { o -> getString(Formatters.outcomeLabel(o)) } ?: getString(R.string.detail_outcome_none) },
-            ),
-        )
-        binding.outcome.setOnItemClickListener { _, _, position, _ -> viewModel.onOutcomeChanged(outcomes[position]) }
+        binding.outcome.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, OutcomeChoices.labels(requireContext())))
+        binding.outcome.setOnItemClickListener { _, _, position, _ -> viewModel.onOutcomeChanged(OutcomeChoices.values[position]) }
 
-        binding.followUp.setOnClickListener { pickFollowUpDate() }
+        binding.followUp.setOnClickListener {
+            FollowUpDatePicker.show(childFragmentManager, viewModel.state.value.draft.followUpAt, viewModel::onFollowUpChanged)
+        }
         binding.followUpLayout.setEndIconOnClickListener { viewModel.onFollowUpChanged(null) }
         binding.saveButton.setOnClickListener { viewModel.save() }
         binding.retryUploadButton.setOnClickListener { viewModel.retryUpload() }
@@ -194,8 +183,7 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.notes.setText(log.notes)
         binding.nextAction.setText(log.nextAction)
         binding.remarks.setText(log.remarks)
-        val outcomeLabel = log.outcome?.let { getString(Formatters.outcomeLabel(it)) } ?: getString(R.string.detail_outcome_none)
-        binding.outcome.setText(outcomeLabel, false)
+        binding.outcome.setText(OutcomeChoices.label(requireContext(), log.outcome), false)
     }
 
     private fun renderFollowUp(binding: FragmentCallDetailBinding, followUpAt: Long?) {
@@ -209,24 +197,6 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.notesLayout.error = tooLong.takeIf { SaveActivityLogUseCase.Field.NOTES in invalid }
         binding.nextActionLayout.error = tooLong.takeIf { SaveActivityLogUseCase.Field.NEXT_ACTION in invalid }
         binding.remarksLayout.error = tooLong.takeIf { SaveActivityLogUseCase.Field.REMARKS in invalid }
-    }
-
-    /** Follow-ups are dates: the picker works in UTC midnights, stored as the local start of that day. */
-    private fun pickFollowUpDate() {
-        val zone = ZoneId.systemDefault()
-        val current = viewModel.state.value.draft.followUpAt
-            ?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
-            ?: LocalDate.now(zone)
-        val picker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText(R.string.detail_follow_up)
-            .setSelection(current.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
-            .setCalendarConstraints(CalendarConstraints.Builder().setValidator(DateValidatorPointForward.now()).build())
-            .build()
-        picker.addOnPositiveButtonClickListener { utcMidnight ->
-            val date = Instant.ofEpochMilli(utcMidnight).atZone(ZoneOffset.UTC).toLocalDate()
-            viewModel.onFollowUpChanged(date.atStartOfDay(zone).toInstant().toEpochMilli())
-        }
-        picker.show(childFragmentManager, "follow_up")
     }
 
     private fun onEvent(binding: FragmentCallDetailBinding, event: CallDetailEvent) {

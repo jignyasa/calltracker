@@ -27,4 +27,21 @@ class PostCallPromptPolicyTest {
         assertFalse(PostCallPromptPolicy.shouldPrompt(call, call.endedAt + TimeUnit.HOURS.toMillis(2)))
         assertFalse(PostCallPromptPolicy.shouldPrompt(call.copy(type = CallType.BLOCKED), justEnded))
     }
+
+    @Test
+    fun `a business conversation that just ended gets the log form`() {
+        val business = call.copy(classification = Classification.BUSINESS, classificationSource = ClassificationSource.CRM_MATCH)
+        assertTrue(PostCallPromptPolicy.shouldOfferLogging(business, justEnded))
+        assertTrue(PostCallPromptPolicy.shouldOfferLogging(business.copy(type = CallType.INCOMING), justEnded))
+    }
+
+    @Test
+    fun `no log form for personal, unsorted, missed or old calls`() {
+        val business = call.copy(classification = Classification.BUSINESS, classificationSource = ClassificationSource.CRM_MATCH)
+        assertFalse(PostCallPromptPolicy.shouldOfferLogging(call, justEnded)) // unsorted: gets the question instead
+        assertFalse(PostCallPromptPolicy.shouldOfferLogging(business.copy(classification = Classification.PERSONAL), justEnded))
+        assertFalse(PostCallPromptPolicy.shouldOfferLogging(business.copy(type = CallType.MISSED), justEnded))
+        assertFalse(PostCallPromptPolicy.shouldOfferLogging(business.copy(type = CallType.REJECTED), justEnded))
+        assertFalse(PostCallPromptPolicy.shouldOfferLogging(business, business.endedAt + TimeUnit.MINUTES.toMillis(11)))
+    }
 }

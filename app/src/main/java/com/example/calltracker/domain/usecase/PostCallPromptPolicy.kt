@@ -22,4 +22,19 @@ object PostCallPromptPolicy {
         call.classification == Classification.UNCLASSIFIED &&
             call.type in promptableTypes &&
             call.endedAt >= now - PROMPT_WINDOW_MS
+
+    /** The log form only pops up right after the call; later the call simply waits in the list. */
+    val LOG_OFFER_WINDOW_MS = TimeUnit.MINUTES.toMillis(10)
+
+    /** A conversation (or attempt) the user just had; missed/rejected calls have nothing to write down yet. */
+    private val loggableTypes = setOf(CallType.INCOMING, CallType.OUTGOING)
+
+    /**
+     * Whether to offer the log form (pop-up, or a notification without the overlay permission) after a call:
+     * a BUSINESS call that just ended. Of several, only the newest is offered.
+     */
+    fun shouldOfferLogging(call: CallRecord, now: Long): Boolean =
+        call.classification == Classification.BUSINESS &&
+            call.type in loggableTypes &&
+            call.endedAt >= now - LOG_OFFER_WINDOW_MS
 }

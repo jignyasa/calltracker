@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentSettingsBinding
 import com.example.calltracker.ui.common.BackgroundRestrictions
+import com.example.calltracker.ui.postcall.PostCallLauncher
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName),
             )
         }
+        binding.popupButton.setOnClickListener { open(PostCallLauncher.overlaySettingsIntent(requireContext())) }
         binding.batteryButton.setOnClickListener { BackgroundRestrictions.requestIgnoreBatteryOptimizations(requireContext()) }
         BackgroundRestrictions.oemGuide?.let { guide ->
             val brand = getString(guide.brand)
@@ -75,6 +77,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val context = requireContext()
         val notificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled()
         binding.notificationStatus.setText(if (notificationsOn) R.string.settings_notifications_on else R.string.settings_notifications_off)
+        val canPopUp = PostCallLauncher.canPopUp(context)
+        binding.popupStatus.setText(if (canPopUp) R.string.settings_popup_on else R.string.settings_popup_off)
+        binding.popupButton.isVisible = !canPopUp
         val unrestricted = BackgroundRestrictions.isIgnoringBatteryOptimizations(context)
         binding.batteryStatus.setText(if (unrestricted) R.string.settings_battery_ok else R.string.settings_battery_restricted)
         binding.batteryButton.isVisible = !unrestricted

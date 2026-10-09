@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pop-up of the toolbar's filter icon: one upload status at a time. -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/status_any"
+            android:title="@string/filter_any_sync" />
+        <item
+            android:id="@+id/status_pending"
+            android:title="@string/filter_sync_pending" />
+        <item
+            android:id="@+id/status_synced"
+            android:title="@string/filter_sync_synced" />
+        <item
+            android:id="@+id/status_failed"
+            android:title="@string/filter_sync_failed" />
+    </group>
+</menu>
