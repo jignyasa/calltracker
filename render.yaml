@@ -1,0 +1,23 @@
+# Render Blueprint: the mock CRM as a free web service, data in Postgres (e.g. Neon; DATABASE_URL is asked for at setup).
+# Render dashboard → New → Blueprint → pick this repo. See mock-server/README.md ("Hosted deployment").
+services:
+  - type: web
+    name: calltracker-crm
+    runtime: node
+    plan: free
+    rootDir: mock-server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      # Neon's pooled connection string (…-pooler…/neondb?sslmode=require). Secret: entered in the dashboard.
+      - key: DATABASE_URL
+        sync: false
+      # Opens /__admin/state?key=<ADMIN_TOKEN> in a browser. Use letters/digits only (it goes into a URL).
+      - key: ADMIN_TOKEN
+        sync: false
+      # The shared demo token the release APK sends (BuildConfig.CRM_API_TOKEN).
+      - key: API_TOKEN
+        value: dev-token
+      - key: RATE_LIMIT_PER_MIN
+        value: "120"

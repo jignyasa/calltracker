@@ -6,7 +6,8 @@ const { seedData } = require('./seed');
 
 /**
  * In-memory store with optional JSON-file persistence (atomic temp-file + rename, debounced).
- * Pass `file: null` to keep everything in memory (tests).
+ * Pass `file: null` to keep everything in memory (tests). Same async interface as the Postgres store
+ * (`pgStore.js`), so the routes don't know which one they run on.
  */
 function createStore({ file = null, seed = true } = {}) {
   let state = emptyState(seed);
@@ -35,42 +36,70 @@ function createStore({ file = null, seed = true } = {}) {
     fs.renameSync(tmp, file);
   }
 
-  return {
-    get state() {
-      return state;
-    },
-    findByPhone(phone) {
+  const ops = {
+    async findByPhone(phone) {
       const contact = state.contacts.find((c) => c.phone === phone);
       if (contact) return { type: 'CONTACT', ...contact };
       const lead = state.leads.find((l) => l.phone === phone);
       if (lead) return { type: 'LEAD', ...lead };
       return null;
     },
-    leadExists: (id) => state.leads.some((l) => l.id === id),
-    contactExists: (id) => state.contacts.some((c) => c.id === id),
-    addLead(lead) {
+    leadExists: async (id) => state.leads.some((l) => l.id === id),
+    contactExists: async (id) => state.contacts.some((c) => c.id === id),
+    async addLead(lead) {
+      if (state.leads.some((l) => l.phone === lead.phone)) throw phoneExists();
       state.leads.push(lead);
       persist();
       return lead;
     },
-    getActivity: (clientId) => state.activities[clientId] ?? null,
-    putActivity(activity) {
+    getActivity: async (clientId) => state.activities[clientId] ?? null,
+    async putActivity(activity) {
       state.activities[activity.clientId] = activity;
       persist();
       return activity;
     },
-    getIdempotent: (key) => state.idempotency[key] ?? null,
-    putIdempotent(key, record) {
-      state.idempotency[key] = record;
+    getIdempotent: async (key) => state.idempotency[key] ?? null,
+    async putIdempotent(key, record) {
+      state.idempotency[key] ??= record;
       persist();
     },
-    nextId(prefix) {
+    async nextId(prefix) {
       state.counters[prefix] = (state.counters[prefix] ?? 0) + 1;
+      persist();
       return `${prefix}_${String(state.counters[prefix]).padStart(5, '0')}`;
     },
-    reset() {
+  };
+
+  const locks = new Map();
+
+  return {
+    ...ops,
+    async snapshot() {
+      return structuredClone(state);
+    },
+    async reset() {
       state = emptyState(seed);
       persist();
+    },
+    /** Runs `fn(tx)` with requests for the same `lockKey` one at a time (the Postgres store uses an advisory lock). */
+    async transaction(lockKey, fn) {
+      const previous = locks.get(lockKey) ?? Promise.resolve();
+      let release;
+      const current = new Promise((resolve) => {
+        release = resolve;
+      });
+      const chained = previous.then(() => current);
+      locks.set(lockKey, chained);
+      await previous;
+      try {
+        return await fn(ops);
+      } finally {
+        release();
+        if (locks.get(lockKey) === chained) locks.delete(lockKey);
+      }
+    },
+    async close() {
+      flushNow();
     },
     flushNow,
   };
@@ -81,4 +110,9 @@ function emptyState(seed) {
   return seed ? { ...base, ...seedData() } : base;
 }
 
-module.exports = { createStore };
+/** Thrown by `addLead` when the phone already has a lead (the Postgres store maps its unique-index error to this). */
+function phoneExists() {
+  return Object.assign(new Error('phone already has a lead'), { code: 'PHONE_EXISTS' });
+}
+
+module.exports = { createStore, phoneExists };
