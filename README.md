@@ -19,7 +19,7 @@ networks, across reboots and on aggressive OEM battery managers. **Personal call
 | | |
 |---|---|
 | **Call detection** | Incoming, outgoing, missed, rejected (plus blocked/voicemail/other). Number, type, start, end, duration, SIM slot. Picked up seconds after the call ends, and caught up after the app was killed, force-stopped or the phone rebooted. |
-| **CRM matching** | Each number is looked up in the CRM (cached for 24 h); a match links the call to the Lead/Contact. No match → **Create lead** from the call. |
+| **CRM matching** | Each completed call's number is looked up in the CRM (answers cached for 24 h between calls); a match links the call to the Lead/Contact, including calls already uploaded. No match → **Create lead** from the call. |
 | **Business vs personal** | Decided automatically whenever there is a signal: your rule for the number → CRM match → work SIM → saved phone contact. Only calls with no signal ask *"Work call?"* in a notification right after the call (Business / Personal / Log). |
 | **Post-call log** | Notes, outcome, follow-up date, next action, remarks — for business calls. |
 | **Offline & sync** | Everything is stored first (encrypted) on the phone; business calls go to an outbox that uploads in batches with idempotency keys, per-item results, retries with backoff, conflict handling, and crash recovery. |

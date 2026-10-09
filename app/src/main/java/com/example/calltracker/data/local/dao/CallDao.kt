@@ -76,7 +76,8 @@ interface CallDao {
         LEFT JOIN crm_cache k ON k.normalized_number = c.normalized_number
         WHERE c.normalized_number IS NOT NULL
           AND c.started_at >= :since
-          AND (k.normalized_number IS NULL OR k.fetched_at < :staleBefore)
+          AND (k.normalized_number IS NULL OR k.fetched_at < :staleBefore
+               OR k.fetched_at < c.started_at + c.duration_sec * 1000)
           AND c.normalized_number NOT IN
               (SELECT normalized_number FROM number_rules WHERE classification = 'PERSONAL')
           AND c.normalized_number NOT IN

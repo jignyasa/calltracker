@@ -1,11 +1,13 @@
 package com.example.calltracker.domain.usecase
 
+import com.example.calltracker.domain.model.ActivityLog
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CreateLeadResult
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.NewLead
+import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.testing.FakeRepositories
 import com.example.calltracker.testing.TestUseCases
 import kotlinx.coroutines.test.runTest
@@ -38,6 +40,24 @@ class CreateLeadFromCallUseCaseTest {
             assertTrue(id in repos.outbox)
         }
         assertEquals("Vikram Rao", repos.getCall(1)!!.crmMatch?.name)
+    }
+
+    @Test
+    fun `a business call uploaded without a lead is re-sent linked to the new lead`() = runTest {
+        // Unknown caller: marked Business by hand, notes uploaded, then "Create lead".
+        repos.addCall(1, classification = Classification.BUSINESS, source = ClassificationSource.USER_MANUAL)
+        TestUseCases(repos, clock).saveLog(1, ActivityLog(notes = "Asked for a quote"))
+        repos.markSynced(1)
+        val before = repos.getActivity(1)!!
+
+        createLead(1, "Vikram Rao", null)
+
+        val after = repos.getActivity(1)!!
+        assertEquals(CrmRecordType.LEAD, repos.getCall(1)!!.crmMatch?.type)
+        assertEquals(SyncStatus.PENDING, after.syncStatus)
+        assertEquals(before.clientId, after.clientId)
+        assertEquals("Asked for a quote", after.log.notes)
+        assertTrue(after.updatedAt > before.updatedAt) // or the CRM would answer CONFLICT, not UPDATED
     }
 
     @Test

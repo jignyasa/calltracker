@@ -108,8 +108,9 @@ be bothered as little as possible.
 - **Database key creation and opening run on the main thread** on first use — a few tens of milliseconds on low-end
   phones.
 - **Calls imported before the dual-SIM fix** keep an empty SIM slot; changing the work SIM re-checks only the last 7 days.
-- **A CRM record created on the server side** can take up to 24 h to be noticed for a number already cached as "not in
-  CRM" (creating the lead in the app is immediate).
+- **A CRM record created on the server side** is noticed on the number's next call (every completed call is searched
+  again), or within 24 h if it doesn't call again; creating the lead in the app is immediate. Either way, calls already
+  uploaded are re-sent with the new link.
 - **Release APKs here are debug-signed** (no keystore in the repo).
 - **targetSdk is 36**, compileSdk 37 — raising the target needs its own review.
 

@@ -79,7 +79,7 @@ class DatabaseTest {
         )
 
     @Test
-    fun numbersNeedingCrmLookupSkipsFreshAnswersAndPersonalNumbers() = runTest {
+    fun numbersNeedingCrmLookupSkipsAnswersNewerThanTheCallAndPersonalNumbers() = runTest {
         val dao = db.callDao()
         val base = 1_789_000_000_000L
         dao.insertIgnore(call(1, "+919000000001"))                    // never looked up → needed
@@ -90,14 +90,17 @@ class DatabaseTest {
         dao.insertIgnore(call(6, "+919000000005"))                    // same number, other call → still never
         dao.insertIgnore(call(7, null))                               // private → never
         dao.insertIgnore(call(8, "+919000000001"))                    // duplicate number → listed once
-        db.crmCacheDao().upsert(CrmCacheEntity("+919000000002", null, null, null, null, fetchedAt = base))
+        dao.insertIgnore(call(9, "+919000000009"))                    // fresh answer, but from before this call ended → needed
+        // Calls last 30 s: the answer for +…02 came after its call ended, the one for +…09 during the call.
+        db.crmCacheDao().upsert(CrmCacheEntity("+919000000002", null, null, null, null, fetchedAt = base + 60_000))
+        db.crmCacheDao().upsert(CrmCacheEntity("+919000000009", null, null, null, null, fetchedAt = base + 10_000))
         db.crmCacheDao().upsert(CrmCacheEntity("+919000000003", null, null, null, null, fetchedAt = base - 10))
         db.numberRuleDao().upsert(NumberRuleEntity("+919000000004", Classification.PERSONAL, 0))
 
         val numbers = dao.numbersNeedingCrmLookup(since = base, staleBefore = base - 1, limit = 10)
 
-        // Most recent call first: +…01 has call 8.
-        assertEquals(listOf("+919000000001", "+919000000003"), numbers)
+        // Most recent call first: +…09 has call 9, +…01 has call 8.
+        assertEquals(listOf("+919000000009", "+919000000001", "+919000000003"), numbers)
         assertEquals(emptyList<String>(), dao.numbersNeedingCrmLookup(since = base + 100, staleBefore = base - 1, limit = 10))
     }
 

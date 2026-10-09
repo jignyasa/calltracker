@@ -49,7 +49,8 @@ interface CallRepository {
     suspend fun setCrmMatch(normalizedNumber: String, match: CrmMatch?)
 
     /**
-     * Numbers with calls since [since] whose CRM answer is missing or older than [staleBefore], most recent first.
+     * Numbers with calls since [since] whose CRM answer is missing, older than [staleBefore], or older than the end of
+     * one of those calls (every completed call is searched once, even within the cache TTL), most recent first.
      * Never includes a number the user marked personal (by rule, or by hand on any of its calls): those are not
      * sent to the CRM at all.
      */

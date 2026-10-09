@@ -5,6 +5,7 @@ import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
+import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.testing.FakeRepositories
 import com.example.calltracker.testing.TestUseCases
 import kotlinx.coroutines.test.runTest
@@ -112,12 +113,64 @@ class ResolveCrmMatchesUseCaseTest {
     fun `fresh cache answers are not looked up again, stale ones are`() = runTest {
         repos.crmCache["+919000000001"] = CachedCrmLookup(null, now - TimeUnit.HOURS.toMillis(1))
         repos.crmCache["+919000000002"] = CachedCrmLookup(null, now - TimeUnit.HOURS.toMillis(30))
-        repos.addCall(1, number = "+919000000001", startedAt = recent)
-        repos.addCall(2, number = "+919000000002", startedAt = recent)
+        val twoHoursAgo = now - TimeUnit.HOURS.toMillis(2) // both calls ended before the answers came
+        repos.addCall(1, number = "+919000000001", startedAt = twoHoursAgo)
+        repos.addCall(2, number = "+919000000002", startedAt = twoHoursAgo)
 
         resolve()
 
         assertEquals(listOf("+919000000002"), repos.crmLookups)
+    }
+
+    @Test
+    fun `a new call is searched again even when the cached answer is still fresh`() = runTest {
+        // "Not in CRM" an hour ago; since then someone added the number as a lead and it called again.
+        repos.crmCache["+919876543210"] = CachedCrmLookup(null, now - TimeUnit.HOURS.toMillis(1))
+        repos.crmDirectory["+919876543210"] = ananya
+        repos.addCall(1, startedAt = now - TimeUnit.HOURS.toMillis(2))
+        repos.addCall(2, startedAt = recent)
+
+        resolve()
+        resolve() // the answer is now newer than every call: no second lookup
+
+        assertEquals(listOf("+919876543210"), repos.crmLookups)
+        assertEquals(ananya, repos.getCall(2)!!.crmMatch)
+        assertEquals(Classification.BUSINESS, repos.getCall(2)!!.classification)
+    }
+
+    @Test
+    fun `an uploaded business call found in the CRM later is re-sent with the link`() = runTest {
+        // Work-SIM call: BUSINESS at once, uploaded before the lookup answered.
+        repos.setWorkSimSlot(1)
+        repos.addCall(1, startedAt = recent, simSlot = 1,
+            classification = Classification.BUSINESS, source = ClassificationSource.WORK_SIM)
+        syncGate.reconcile(1)
+        repos.markSynced(1)
+        val before = repos.getActivity(1)!!
+        repos.crmDirectory["+919876543210"] = ananya
+
+        resolve()
+
+        val after = repos.getActivity(1)!!
+        assertEquals(ananya, repos.getCall(1)!!.crmMatch)
+        assertEquals(SyncStatus.PENDING, after.syncStatus)
+        assertEquals(before.clientId, after.clientId)
+        assertTrue(after.updatedAt > before.updatedAt)
+    }
+
+    @Test
+    fun `a renamed CRM record does not re-send an uploaded call`() = runTest {
+        repos.crmDirectory["+919876543210"] = ananya
+        repos.addCall(1, startedAt = now - TimeUnit.HOURS.toMillis(30))
+        resolve() // links, queues
+        repos.markSynced(1)
+        repos.crmDirectory["+919876543210"] = ananya.copy(name = "Ananya S.")
+
+        repos.lookup("+919876543210", now)
+        useCases.reclassifyNumber("+919876543210")
+
+        assertEquals("Ananya S.", repos.getCall(1)!!.crmMatch?.name)
+        assertEquals(SyncStatus.SYNCED, repos.getActivity(1)!!.syncStatus)
     }
 
     @Test

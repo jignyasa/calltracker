@@ -185,9 +185,11 @@ class FakeRepositories :
         return calls.value.values
             .filter { it.normalizedNumber != null && it.startedAt >= since }
             .groupBy { it.normalizedNumber!! }
-            .filterKeys { number ->
+            .filter { (number, list) ->
                 val cached = crmCache[number]
-                (cached == null || cached.fetchedAt < staleBefore) && number !in personalByHand && number !in personalRules
+                val lastEnd = list.maxOf { it.startedAt + it.durationSec * 1000 }
+                (cached == null || cached.fetchedAt < staleBefore || cached.fetchedAt < lastEnd) &&
+                    number !in personalByHand && number !in personalRules
             }
             .entries.sortedByDescending { (_, list) -> list.maxOf { it.startedAt } }
             .map { it.key }

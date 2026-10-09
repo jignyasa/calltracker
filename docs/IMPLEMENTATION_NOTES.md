@@ -350,3 +350,25 @@ A real dialled call on the A50 to a number added to the CRM as lead "Test Custom
 - The number is a saved phone contact, so both calls were first **Personal**. Once the CRM lookup ran, "in the CRM" outranked "saved contact": both, plus 4 earlier calls with that number from the last 7 days, became **Business**, were linked to `lead_00003` and uploaded.
 - A note added in the app reached the CRM as version 2. The number appeared in 0 app log lines.
 - **Fixed:** the first lookup failed because the USB port forward had dropped. Its retry was queued behind an older CRM-lookup retry job whose backoff had grown to about 12 minutes during the day's outage tests. `CrmLookupScheduler.scheduleRetry` now **replaces** that job, so a new call restarts the backoff at 30 s.
+
+---
+
+## CRM link after upload (2026-10-10)
+A check against the spec's "search the number when a call completes, link it, or create a lead" found two gaps:
+- **A link added after upload never reached the CRM.** `SyncGate` re-sends only when a call's classification
+  changes. So a call that was already Business stayed unlinked in the CRM:
+  - one the user marked Business by hand, uploaded, then used **Create lead** on;
+  - a work-SIM call that uploaded before the lookup answered.
+
+  `ReclassifyNumberUseCase` now compares each call's CRM link (type + id; a rename doesn't count) before and
+  after. A Business call whose link changed and that already has an activity is re-queued. Its `updatedAt` moves
+  past the previous one, so the CRM answers UPDATED, not CONFLICT.
+- **A new call within 24 h of a "not in CRM" answer wasn't searched.** `numbersNeedingCrmLookup` now also
+  re-asks when the cached answer is older than the end of one of the number's calls. Each completed call is
+  searched once; the 24 h TTL still covers numbers with no new calls.
+- **Tests:** 4 new (create lead re-links an uploaded call; late CRM match re-sends a work-SIM call; a renamed
+  record doesn't re-send; a new call is searched despite a fresh cache) plus the DAO query test. 139 JVM tests,
+  lint 0/0.
+- **On the A50:** a fake call-log row from an unknown number was marked Business. Its note uploaded with no
+  lead (version 2). After **Create lead**, the same activity (same `clientId`, note kept) became version 3 with
+  `leadId = lead_00004`. Still one activity for the number, and the number appeared in no app log line.

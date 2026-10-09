@@ -50,8 +50,10 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
    are classified PERSONAL unless a rule or CRM match says otherwise.
 5. **CRM matching** never blocks the sweep: the sweep classifies from local signals only (`GatherClassificationSignals`: rule, *cached*
    CRM answer, work SIM from `SettingsRepository`, device contact). Then `CrmLookupScheduler.resolveAfterSweep` runs `CrmLookupWorker` →
-   `ResolveCrmMatchesUseCase` (numbers from the last 7 days with no/stale cache, 24 h TTL, ≤50 per run) → `ReclassifyNumberUseCase`
-   (skips USER_MANUAL, reconciles the outbox). Only after that does it post the post-call prompt (`PostCallPromptPolicy`: UNCLASSIFIED,
+   `ResolveCrmMatchesUseCase` (numbers from the last 7 days with no/stale cache, 24 h TTL, or a cached answer older than one of
+   the number's calls ended, so every completed call is searched once; ≤50 per run) → `ReclassifyNumberUseCase`
+   (skips USER_MANUAL, reconciles the outbox; a BUSINESS call whose CRM link (type + id) changed is re-sent with a bumped
+   `updatedAt`, so links found or created after upload reach the CRM). Only after that does it post the post-call prompt (`PostCallPromptPolicy`: UNCLASSIFIED,
    ended < 1 h ago, max 3). The post-sweep run has no network constraint so prompts aren't delayed offline; failed lookups go to the
    network-bound `crm-lookup-retry` work.
 6. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.

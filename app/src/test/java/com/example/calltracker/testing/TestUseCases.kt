@@ -23,7 +23,7 @@ class TestUseCases(val repos: FakeRepositories, val clock: Clock) {
     val syncGate = SyncGate(repos, repos, repos, clock)
     val gatherSignals = GatherClassificationSignals(repos, repos)
     val reclassifier = CallReclassifier(repos, gatherSignals, ClassifyCallUseCase(), syncGate)
-    val reclassifyNumber = ReclassifyNumberUseCase(repos, repos, repos, reclassifier, repos)
+    val reclassifyNumber = ReclassifyNumberUseCase(repos, repos, repos, reclassifier, repos, syncGate, repos, clock)
     val resolveCrm = ResolveCrmMatchesUseCase(repos, repos, reclassifyNumber, clock)
     val createLead = CreateLeadFromCallUseCase(repos, repos, reclassifyNumber, syncGate, repos, clock)
     val setClassification = SetCallClassificationUseCase(repos, repos, repos, syncGate, repos, clock)
