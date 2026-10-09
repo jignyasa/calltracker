@@ -5,6 +5,7 @@ services:
     name: calltracker-crm
     runtime: node
     plan: free
+    region: singapore # next to the Neon database (AWS ap-southeast-1) and closest to users in India
     rootDir: mock-server
     buildCommand: npm ci
     startCommand: npm start
