@@ -19,6 +19,7 @@ object AppDatabaseFactory {
         }
         return Room.databaseBuilder(context, AppDatabase::class.java, name)
             .openHelperFactory(SupportOpenHelperFactory(key.passphrase))
+            .addMigrations(*ALL_MIGRATIONS)
             .build()
     }
 }

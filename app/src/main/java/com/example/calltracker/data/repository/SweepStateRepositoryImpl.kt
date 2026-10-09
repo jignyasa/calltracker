@@ -10,7 +10,7 @@ class SweepStateRepositoryImpl @Inject constructor(
     private val dao: SweepStateDao,
 ) : SweepStateRepository {
 
-    override suspend fun get(): SweepWatermark? = dao.get()?.let { SweepWatermark(it.lastCallLogId, it.lastStartedAt) }
+    override suspend fun get(): SweepWatermark? = dao.get()?.let { SweepWatermark(it.lastCallLogId, it.lastStartedAt, it.notBefore) }
 
     override suspend fun save(watermark: SweepWatermark, sweptAt: Long) {
         dao.upsert(
@@ -18,6 +18,7 @@ class SweepStateRepositoryImpl @Inject constructor(
                 lastCallLogId = watermark.lastCallLogId,
                 lastStartedAt = watermark.lastStartedAt,
                 lastSweepAt = sweptAt,
+                notBefore = watermark.notBefore,
             ),
         )
     }

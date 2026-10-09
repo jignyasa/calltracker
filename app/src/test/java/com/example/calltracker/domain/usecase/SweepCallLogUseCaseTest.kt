@@ -44,8 +44,28 @@ class SweepCallLogUseCaseTest {
 
         assertEquals(1, result.imported.size)
         assertEquals(listOf(2L), repos.allCalls.map { it.callLogId })
-        assertEquals(SweepWatermark(lastCallLogId = 2, lastStartedAt = now - TimeUnit.DAYS.toMillis(6)), repos.watermark)
+        assertEquals(
+            SweepWatermark(lastCallLogId = 2, lastStartedAt = now - TimeUnit.DAYS.toMillis(6), notBefore = now - TimeUnit.DAYS.toMillis(7)),
+            repos.watermark,
+        )
     }
+
+    @Test
+    fun `old rows with a newer id are never imported on later sweeps`() = runTest {
+        // Found on a device: a 10-day-old row inserted after a 3-day-old one has the higher id. The first sweep skips it
+        // by date, but the second used to pick it up by id. Restored call-history backups look exactly like this.
+        callLog.add(id = 1, startedAt = now - TimeUnit.DAYS.toMillis(3))
+        callLog.add(id = 2, startedAt = now - TimeUnit.DAYS.toMillis(10))
+        sweep()
+        callLog.add(id = 3, startedAt = now - TimeUnit.DAYS.toMillis(30))
+        callLog.add(id = 4, startedAt = now - minute)
+
+        val second = sweep() as SweepCallLogUseCase.Result.Completed
+
+        assertEquals(1, second.imported.size)
+        assertEquals(listOf(1L, 4L), repos.allCalls.map { it.callLogId })
+    }
+
 
     @Test
     fun `numbers are normalized and classified on import`() = runTest {

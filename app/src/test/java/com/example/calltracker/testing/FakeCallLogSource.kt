@@ -28,7 +28,10 @@ class FakeCallLogSource : CallLogSource {
         if (!permissionGranted) throw CallLogAccessDeniedException()
         requests += watermark
         return rows
-            .filter { (it.callLogId > watermark.lastCallLogId || it.startedAt > watermark.lastStartedAt - overlapMs) && it.callLogId > afterId }
+            .filter {
+                (it.callLogId > watermark.lastCallLogId || it.startedAt > watermark.lastStartedAt - overlapMs) &&
+                    it.startedAt >= watermark.notBefore && it.callLogId > afterId
+            }
             .sortedBy { it.callLogId }
             .take(limit)
     }

@@ -39,6 +39,10 @@ android {
         viewBinding = true
         buildConfig = true
     }
+    sourceSets {
+        // Exported Room schemas, read by MigrationTestHelper (Robolectric doesn't see test-only assets, so it's on-device).
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
@@ -107,6 +111,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.work.testing)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
 }

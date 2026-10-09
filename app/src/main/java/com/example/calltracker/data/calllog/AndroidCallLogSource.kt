@@ -33,10 +33,12 @@ class AndroidCallLogSource @Inject constructor(
     ): List<CallLogEntry> = withContext(io) {
         if (!granted(Manifest.permission.READ_CALL_LOG)) throw CallLogAccessDeniedException()
 
-        val selection = "(${CallLog.Calls._ID} > ? OR ${CallLog.Calls.DATE} > ?) AND ${CallLog.Calls._ID} > ?"
+        val selection = "(${CallLog.Calls._ID} > ? OR ${CallLog.Calls.DATE} > ?) " +
+            "AND ${CallLog.Calls.DATE} >= ? AND ${CallLog.Calls._ID} > ?"
         val args = arrayOf(
             watermark.lastCallLogId.toString(),
             (watermark.lastStartedAt - overlapMs).toString(),
+            watermark.notBefore.toString(),
             afterId.toString(),
         )
         val queryArgs = bundleOf(

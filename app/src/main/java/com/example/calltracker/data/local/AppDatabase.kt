@@ -23,7 +23,7 @@ import com.example.calltracker.data.local.entity.SweepStateEntity
         CrmCacheEntity::class,
         SweepStateEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

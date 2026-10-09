@@ -37,7 +37,8 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
    Runs on `BOOT_COMPLETED`/`MY_PACKAGE_REPLACED`, app open, PHONE_STATE idle, a WorkManager **content-URI trigger on
    `CallLog.Calls.CONTENT_URI`** (`CallLogChangedWorker`, re-armed by every sweep), and an hourly unique periodic worker.
    All of them only call `SweepScheduler`. The logic lives in `domain/usecase/SweepCallLogUseCase` (pages of 200, one transaction per page).
-4. First sweep backfills **7 days**. Device contacts (`CACHED_NAME` present) are classified PERSONAL unless a rule or CRM match says otherwise.
+4. First sweep backfills **7 days** (`sweep_state.not_before` keeps that floor for every later sweep). Device contacts (`CACHED_NAME` present)
+   are classified PERSONAL unless a rule or CRM match says otherwise.
 5. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.
    On the emulator: `adb emu gsm call <n>` / `gsm accept <n>` / `gsm cancel <n>`; outgoing calls via `adb shell am start -a android.intent.action.CALL -d tel:<n>`.
 
@@ -78,7 +79,8 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
   Keep `domain/` JVM-testable. `test/.../testing/FakeRepositories` implements every domain repository over shared in-memory state.
 - DAO tests run on Robolectric with an unencrypted in-memory Room DB and **`@Config(sdk = [34])`** (Robolectric needs JDK 21 for SDK 35+).
   SQLCipher can't load under Robolectric; encryption is covered by `androidTest/.../EncryptedDatabaseTest`.
-- Room schemas are exported to `app/schemas/`. Bump the DB version and add a migration for any schema change.
+- Room schemas are exported to `app/schemas/`. Bump the DB version and add a migration (`data/local/Migrations.kt`, `ALL_MIGRATIONS`)
+  for any schema change, and cover it in `androidTest/.../MigrationTest` (on-device: Robolectric doesn't see the schema assets).
 - `DatabaseKeyProvider`: if the Keystore-wrapped key can't be unwrapped, a new key is made and the DB is deleted
   (calls are re-read from the CallLog).
 

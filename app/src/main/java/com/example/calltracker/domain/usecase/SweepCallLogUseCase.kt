@@ -39,11 +39,10 @@ class SweepCallLogUseCase @Inject constructor(
     }
 
     suspend operator fun invoke(): Result {
-        var watermark = sweepState.get() ?: SweepWatermark(
-            // No id lower bound on the first run; only the backfill window applies.
-            lastCallLogId = Long.MAX_VALUE,
-            lastStartedAt = clock.millis() - BACKFILL_MS,
-        )
+        var watermark = sweepState.get() ?: (clock.millis() - BACKFILL_MS).let { floor ->
+            // No id lower bound on the first run; only the backfill window applies, then and on every later sweep.
+            SweepWatermark(lastCallLogId = Long.MAX_VALUE, lastStartedAt = floor, notBefore = floor)
+        }
         val queryWatermark = watermark
         var cursor = -1L
         var scanned = 0
@@ -88,7 +87,7 @@ class SweepCallLogUseCase @Inject constructor(
 
     private fun advance(current: SweepWatermark, page: List<CallLogEntry>): SweepWatermark {
         val maxId = page.maxOf { it.callLogId }
-        return SweepWatermark(
+        return current.copy(
             lastCallLogId = if (current.lastCallLogId == Long.MAX_VALUE) maxId else maxOf(current.lastCallLogId, maxId),
             lastStartedAt = maxOf(current.lastStartedAt, page.maxOf { it.startedAt }),
         )

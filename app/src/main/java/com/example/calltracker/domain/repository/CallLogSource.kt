@@ -9,7 +9,7 @@ class CallLogAccessDeniedException(cause: Throwable? = null) : Exception("READ_C
 interface CallLogSource {
     /**
      * Returns up to [limit] rows that are newer than [watermark] (by id, or by start time after [overlapMs]),
-     * with id greater than [afterId], ordered by id ascending.
+     * started at or after [SweepWatermark.notBefore], with id greater than [afterId], ordered by id ascending.
      *
      * @throws CallLogAccessDeniedException
      */

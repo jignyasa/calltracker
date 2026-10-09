@@ -112,6 +112,8 @@ data class SweepStateEntity(
     @ColumnInfo(name = "last_call_log_id") val lastCallLogId: Long,
     @ColumnInfo(name = "last_started_at") val lastStartedAt: Long,
     @ColumnInfo(name = "last_sweep_at") val lastSweepAt: Long,
+    /** Backfill floor; CallLog rows that started earlier are never imported. Default only for MIGRATION_1_2. */
+    @ColumnInfo(name = "not_before", defaultValue = "0") val notBefore: Long,
 ) {
     companion object {
         const val SINGLETON_ID = 0
