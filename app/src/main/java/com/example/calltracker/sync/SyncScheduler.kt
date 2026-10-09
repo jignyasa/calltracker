@@ -29,19 +29,23 @@ class SyncScheduler @Inject constructor(
      * Something was queued. The short delay lets the enqueuing transaction commit and lets a burst of edits share one
      * run. APPEND_OR_REPLACE: a run already uploading finishes, then one more picks up what arrived meanwhile.
      */
-    override fun requestSync() = enqueue(delaySeconds = DEBOUNCE_SECONDS)
+    override fun requestSync() = enqueue(delaySeconds = DEBOUNCE_SECONDS, ExistingWorkPolicy.APPEND_OR_REPLACE)
 
-    /** "Upload now" from the UI. */
-    override fun syncNow() = enqueue(delaySeconds = 0)
+    /**
+     * "Upload now" from the UI. REPLACE, not append: after failures the queued run may be backing off for minutes,
+     * and the user asked for now. Cancelling a run mid-upload is safe: its IN_FLIGHT items are reset at the start
+     * of the next run, and anything the CRM already stored comes back as DUPLICATE.
+     */
+    override fun syncNow() = enqueue(delaySeconds = 0, ExistingWorkPolicy.REPLACE)
 
-    private fun enqueue(delaySeconds: Long) {
+    private fun enqueue(delaySeconds: Long, policy: ExistingWorkPolicy) {
         val request = OneTimeWorkRequestBuilder<SyncWorker>()
             .setConstraints(online)
             .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, BACKOFF_SECONDS, TimeUnit.SECONDS)
             .addTag(TAG)
             .build()
-        workManager.enqueueUniqueWork(ONE_SHOT, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+        workManager.enqueueUniqueWork(ONE_SHOT, policy, request)
     }
 
     /** Safety net: anything left behind (a run killed by the OS, a missed trigger) goes out within the hour. */

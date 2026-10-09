@@ -17,7 +17,8 @@ import kotlin.concurrent.thread
  * adb shell pm grant com.example.calltracker android.permission.WRITE_CALL_LOG
  * adb shell am broadcast -n com.example.calltracker/.debug.CallLogSeedReceiver --es seed types
  *
- * Actions: types, old, contact, late, bulk (`--ei count N --ei base B`), count (`--ei base B`), cleanup. Every fake number starts with [FAKE_PREFIX].
+ * Actions: types, old, contact, late, bulk (`--ei count N --ei base B`, or `--es number N` for one number),
+ * count (`--ei base B`), cleanup. Every fake number starts with [FAKE_PREFIX].
  */
 class CallLogSeedReceiver : BroadcastReceiver() {
 
@@ -69,8 +70,11 @@ class CallLogSeedReceiver : BroadcastReceiver() {
                 // Keep count ≤ ~200 per broadcast: inserts are slow on some OEMs and the broadcast times out at 60 s.
                 val count = intent.getIntExtra("count", 200)
                 val base = intent.getIntExtra("base", 5000)
+                // `--es number +9190000NNNNN`: every row from that one number (e.g. a CRM lead with a big backlog).
+                val oneNumber = intent.getStringExtra("number")?.takeIf { it.startsWith(FAKE_PREFIX) }
                 repeat(count) { i ->
-                    add("$FAKE_PREFIX${(base + i).toString().padStart(5, '0')}", CallLog.Calls.MISSED_TYPE, now - (count - i) * 1_000L)
+                    val number = oneNumber ?: "$FAKE_PREFIX${(base + i).toString().padStart(5, '0')}"
+                    add(number, CallLog.Calls.MISSED_TYPE, now - (count - i) * 1_000L)
                 }
             }
             "count" -> {

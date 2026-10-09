@@ -233,3 +233,18 @@ SyncWorker ─► UploadPendingActivitiesUseCase:  reset stale IN_FLIGHT → cla
 - **Being offline is handled by WorkManager's network constraint.** I tested a server outage on the device, but not airplane mode.
 - **A rejected call stays failed** until you tap Retry or edit it. That's deliberate: retrying unchanged would just be rejected again.
 - **An activity already uploaded to the CRM can't be deleted from the app.** Marking it Personal stops further updates, and the UI warns about this.
+
+### Follow-up device checks (2026-10-09)
+Run after Phase 6 was committed, to cover what had only been unit-tested. All passed.
+
+| Check | Result |
+|---|---|
+| **Airplane mode:** an edit saved offline stayed "Waiting to upload". The job was held only by `CONNECTIVITY` (0 runs in 40 s) | ✅ |
+| **Back online:** after airplane mode was turned off, the edit uploaded by itself without opening the app | ✅ |
+| **150-call backlog for one CRM lead**, arriving while sweeps ran | ✅ CRM received exactly 150, no duplicates |
+| **App crashed mid-upload:** CRM blocked while 150 calls queued; released with an 8 s server delay; "Upload now"; `am crash` while the 100-item request (21 KB) was in flight | ✅ CRM had stored those 100 but the app never got the answer. On relaunch: "Uploaded 150" (100 DUPLICATE + 50 CREATED). CRM: **exactly 150** |
+| **Wrong API token:** HTTP 401 → retry, call kept, nothing stored; correct build reinstalled → it uploaded | ✅ |
+
+**Fixed during these checks:** after failures, the queued upload can sit in exponential backoff for minutes, and "Upload now" was queued *behind* it. "Upload now" now **replaces** the queued run. This is safe even mid-upload: a cancelled run's IN_FLIGHT items are reset at the start of the next run, and anything the CRM already stored comes back as DUPLICATE.
+
+**Test tooling:** the debug seeder's `bulk` action takes `--es number +9190000NNNNN`, so a whole backlog can come from one number.
