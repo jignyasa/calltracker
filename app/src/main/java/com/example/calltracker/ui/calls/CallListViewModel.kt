@@ -7,6 +7,7 @@ import com.example.calltracker.domain.model.CallListEntry
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.sync.SweepRequester
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -37,12 +38,16 @@ data class CallListUiState(
     val loading: Boolean = true,
     val calls: List<CallListEntry> = emptyList(),
     val filter: CallFilter = CallFilter(),
+    /** Across all calls, whatever the filter. */
+    val waitingToUpload: Int = 0,
+    val uploadFailed: Int = 0,
 )
 
 @HiltViewModel
 class CallListViewModel @Inject constructor(
     calls: CallRepository,
     private val sweeps: SweepRequester,
+    private val uploads: SyncRequester,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -56,8 +61,17 @@ class CallListViewModel @Inject constructor(
                 classification = Classification.entries.firstOrNull { it.name == classification },
                 sync = SyncFilter.entries.firstOrNull { it.name == sync },
             )
-            CallListUiState(loading = false, calls = all.filter(filter::matches), filter = filter)
+            CallListUiState(
+                loading = false,
+                calls = all.filter(filter::matches),
+                filter = filter,
+                waitingToUpload = all.count { it.syncStatus in SyncFilter.PENDING.statuses },
+                uploadFailed = all.count { it.syncStatus in SyncFilter.FAILED.statuses },
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CallListUiState())
+
+    /** "Upload now": doesn't wait for the debounce or the next periodic run. */
+    fun uploadNow() = uploads.syncNow()
 
     fun setClassificationFilter(classification: Classification?) {
         savedState[KEY_CLASSIFICATION] = classification?.name

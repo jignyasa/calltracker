@@ -21,6 +21,7 @@ import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
 import com.example.calltracker.domain.usecase.SetCallClassificationUseCase
 import com.example.calltracker.domain.usecase.SyncGate
+import com.example.calltracker.domain.repository.SyncRequester
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -98,6 +99,40 @@ class DatabaseTest {
     }
 
     @Test
+    fun outboxClaimAndGenerationGuardedUpdates() = runTest {
+        val dao = db.outboxDao()
+        val a = db.callDao().insertIgnore(call(1))
+        val b = db.callDao().insertIgnore(call(2))
+        val c = db.callDao().insertIgnore(call(3))
+        dao.enqueue(a, "client-a", now = 10)
+        dao.enqueue(b, "client-b", now = 20)
+        dao.enqueue(c, "client-c", now = 30)
+
+        // Oldest first, limited, excluding what this run already tried.
+        val claimed = dao.claim(limit = 2, exclude = listOf(a), now = 40)
+        assertEquals(listOf(b, c), claimed.map { it.callId })
+        assertEquals(SyncStatus.IN_FLIGHT, dao.get(b)!!.status)
+        assertEquals(SyncStatus.PENDING, dao.get(a)!!.status)
+
+        // The user edits b while it's being uploaded: the old generation's result must not mark it done.
+        dao.enqueue(b, "client-b", now = 50)
+        assertEquals(0, dao.markSynced(b, generation = 1, now = 60))
+        assertEquals(SyncStatus.PENDING, dao.get(b)!!.status)
+        assertEquals(1, dao.markSynced(b, generation = 2, now = 60))
+        assertEquals(SyncStatus.SYNCED, dao.get(b)!!.status)
+
+        assertEquals(1, dao.markFailed(c, generation = 1, status = SyncStatus.FAILED_RETRYABLE, error = "503", now = 70))
+        assertEquals(1, dao.get(c)!!.attempts)
+        assertEquals("503", dao.get(c)!!.lastError)
+
+        // Crash recovery.
+        dao.claim(limit = 10, exclude = emptyList(), now = 80)
+        assertEquals(2, dao.resetInFlight(now = 90))
+        assertEquals(SyncStatus.PENDING, dao.get(a)!!.status)
+        assertEquals("synced rows are never re-claimed", SyncStatus.SYNCED, dao.get(b)!!.status)
+    }
+
+    @Test
     fun reinsertingTheSameCallLogRowIsIgnored() = runTest {
         val dao = db.callDao()
         val first = dao.insertIgnore(call(10))
@@ -144,7 +179,7 @@ class DatabaseTest {
     fun useCasesAgainstRoomKeepClassificationAndOutboxInStep() = runTest {
         val calls = CallRepositoryImpl(db.callDao(), clock)
         val activities = ActivityRepositoryImpl(db.activityDao())
-        val outbox = OutboxRepositoryImpl(db.outboxDao())
+        val outbox = OutboxRepositoryImpl(db.outboxDao(), object : SyncRequester { override fun requestSync() = Unit })
         val rules = NumberRuleRepositoryImpl(db.numberRuleDao())
         val tx = RoomTransactionRunner(db)
         val gate = SyncGate(calls, activities, outbox, clock)

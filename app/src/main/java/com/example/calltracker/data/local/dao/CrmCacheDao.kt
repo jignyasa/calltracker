@@ -13,4 +13,7 @@ interface CrmCacheDao {
 
     @Upsert
     suspend fun upsert(entry: CrmCacheEntity)
+
+    @Query("DELETE FROM crm_cache WHERE normalized_number = :number")
+    suspend fun delete(number: String)
 }

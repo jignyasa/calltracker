@@ -219,6 +219,14 @@
                     tools:text="Waiting to upload" />
 
                 <Button
+                    android:id="@+id/retryUploadButton"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/detail_retry_upload"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/saveButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

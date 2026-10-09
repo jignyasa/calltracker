@@ -31,7 +31,9 @@ class SaveActivityLogUseCaseTest {
         val activity = repos.getActivity(1)!!
         assertEquals("Wants a quote", activity.log.notes)
         assertNull(activity.log.remarks)
-        assertEquals(9_000L, activity.updatedAt)
+        // Created at 9 000 by SyncGate in the same instant (fixed clock): an edit is always stamped after the
+        // version it replaced, so the CRM's last-write-wins can't drop it.
+        assertEquals(9_001L, activity.updatedAt)
         assertEquals(SyncStatus.PENDING, activity.syncStatus)
     }
 

@@ -139,3 +139,97 @@ Single activity, plain fragment transactions (`AppNavigator`, implemented by `Ma
 - **No OEM-specific battery screens yet** (Phase 7). The Settings button opens Android's standard battery-optimisation list.
 - **The call list isn't paged** (Phase 7 covers large volumes).
 - **Changing the work SIM only re-checks the last 7 days**, so older calls keep their classification.
+
+---
+
+## Phase 6: Sync engine (2026-10-09)
+
+### What it does
+Every **Business** call is uploaded to the CRM as an activity, including the notes you add later. Uploads survive being offline, the CRM being down, the app being killed, and edits made while an upload is in progress. Nothing that isn't Business is ever sent.
+
+### How it works
+
+```
+SyncGate.reconcile ─► outbox (PENDING, generation n) ─► SyncScheduler (unique work, CONNECTED, 5 s debounce)
+                                                              │
+SyncWorker ─► UploadPendingActivitiesUseCase:  reset stale IN_FLIGHT → claim ≤100 → build payloads → POST /activities/batch
+                                               └─ per item, only if the generation is still n:
+                                                  CREATED / DUPLICATE / UPDATED → SYNCED (+ server id)
+                                                  CONFLICT  → last write wins on updatedAt (CRM copy replaces local if newer)
+                                                  INVALID   → FAILED_PERMANENT, reason shown on the call
+                                                              (stale lead/contact link → healed and re-queued, see below)
+                                                  ERROR     → FAILED_RETRYABLE
+                                               whole batch fails (network / 5xx / 429) → all FAILED_RETRYABLE, Result.retry()
+```
+
+- **Idempotent:** each activity has a `clientId` UUID generated once on the phone, which is its idempotency key. If a response is lost and the upload is repeated, the CRM answers DUPLICATE, which counts as uploaded.
+- **No lost edits:** each (re)queue bumps the outbox row's `generation`. A result only applies if the generation it was sent with is still current. An edit made during an upload stays PENDING and goes out in the next run.
+- **One bad item never blocks the batch:** each item's result is applied on its own, in its own transaction.
+- **Retries:** WorkManager's exponential backoff (30 s, doubling). An hourly unique periodic job catches anything left over, and every app start or boot requests a run.
+- **Crash recovery:** a run first resets IN_FLIGHT rows to PENDING.
+- **Large backlogs:** batches of up to 100, and at most 1000 items per run so a single run can't go on for too long.
+
+### Privacy
+- **Business check at send time.** `SyncGate` is still the only way into the outbox. The uploader also re-checks that each call is BUSINESS right before building its payload; anything else is removed from the outbox and never sent. A test injects a non-business row directly into the outbox to prove it is refused.
+- **Explicit payload.** `ActivityPayload` holds exactly the contract's fields: E.164 number, call type, times, duration, SIM slot, CRM lead/contact id and your log fields. Contact names are never in it.
+- **No call details in logs.** The uploader never logs the request; the worker logs counts only.
+
+### Decisions
+- **Call types the CRM doesn't accept** are mapped to the nearest one: blocked → REJECTED, voicemail → MISSED, "answered elsewhere" → INCOMING.
+- **A Business call with no number** (private or unknown) can't be stored by the CRM. It fails locally with a clear reason and is never sent.
+- **Stale CRM link (found on the device).** If the linked CRM lead or contact was deleted or merged, the CRM rejects the activity with "leadId/contactId does not exist", and retrying unchanged would fail forever. The app now:
+  - forgets the cached CRM answer;
+  - drops the link and re-runs the rule engine for that number, so a call that was Business *only because of that CRM record* leaves the outbox and is never sent;
+  - re-queues the call if it is still Business, so it uploads without the link.
+
+  The next CRM lookup re-links the number if the record exists under a new id.
+- **Clock skew (found on the device).** If the CRM's copy carries a timestamp from a clock running ahead, last-write-wins would silently drop every local edit until the phone's clock caught up. A save is now stamped `max(now, previous updatedAt + 1)`, so an edit always counts as newer than the version it was based on.
+
+### UI
+- **Call list:** "N calls waiting to upload · N failed" under the filters, plus the existing Pending / Synced / Failed filters and badges. ⋮ → **Upload now** runs immediately (once online).
+- **Call details:** upload status, with the CRM's reason when it was rejected, and **Retry upload** for rejected calls.
+
+### Main files
+`domain/model/Sync.kt`, `domain/repository/{ActivityUploader (+ SyncRequester), OutboxRepository}`,
+`domain/usecase/{UploadPendingActivitiesUseCase, RetryUploadUseCase}`, `data/remote/ActivityUploaderImpl`,
+`data/local/dao/OutboxDao` (claim, generation-guarded updates), `sync/{SyncWorker, SyncScheduler}`.
+
+### Checked
+- **122 JVM tests** (25 new):
+  - The upload use case:
+    - exact payload, with no contact name
+    - a personal call never sent, even when injected into the outbox
+    - one bad item never blocking the batch
+    - network/5xx failure and recovery
+    - duplicate replay
+    - an edit during upload
+    - conflict, including with a clock that runs ahead
+    - crash recovery
+    - a call without a number
+    - a 250-call backlog sent as 100 + 100 + 50
+    - a missing result
+    - both stale-link cases
+    - retry upload
+  - `ActivityUploaderImpl` against MockWebServer
+  - Room outbox queries (claim, generation guard, crash reset)
+  - `SyncWorker` success/retry mapping
+- **Lint:** 0 errors, 7 warnings (all from before Phase 4).
+- **On the Samsung A50 against the mock CRM** (all passed):
+
+| Check | Result |
+|---|---|
+| Queue flushed on install | ✅ |
+| Calls linked to leads that no longer exist were rejected and shown ("5 failed", Failed filter, reason, Retry) | ✅ |
+| Retry on a hand-classified call healed the link and uploaded it | ✅ |
+| Retry on a CRM-only call dropped it to Personal; never sent | ✅ |
+| Edit → UPDATED (server version 2) | ✅ |
+| Forced 503 → retry after backoff → uploaded (version 3) | ✅ |
+| Newer copy edited on the CRM side → CONFLICT → the app shows the CRM's notes and outcome | ✅ |
+| Per-item ERROR → "1 call waiting to upload" → uploaded once the fault was cleared | ✅ |
+| After the skew fix, an edit made after that conflict reached the CRM (version 5) | ✅ |
+| The CRM received only Business test calls: none of the real calls, nothing that turned Personal | ✅ |
+
+### Known limitations (later)
+- **Being offline is handled by WorkManager's network constraint.** I tested a server outage on the device, but not airplane mode.
+- **A rejected call stays failed** until you tap Retry or edit it. That's deliberate: retrying unchanged would just be rejected again.
+- **An activity already uploaded to the CRM can't be deleted from the app.** Marking it Personal stops further updates, and the UI warns about this.

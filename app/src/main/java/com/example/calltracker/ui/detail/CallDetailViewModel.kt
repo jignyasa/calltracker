@@ -8,9 +8,11 @@ import com.example.calltracker.domain.model.ActivityLog
 import com.example.calltracker.domain.model.CallOutcome
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
+import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.repository.ActivityRepository
 import com.example.calltracker.domain.repository.CallRepository
 import com.example.calltracker.domain.usecase.CreateLeadFromCallUseCase
+import com.example.calltracker.domain.usecase.RetryUploadUseCase
 import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
 import com.example.calltracker.domain.usecase.SetCallClassificationUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +43,7 @@ data class CallDetailUiState(
     val canLog: Boolean get() = call?.classification == Classification.BUSINESS
     val dirty: Boolean get() = canLog && draft != (activity?.log ?: ActivityLog())
     val canCreateLead: Boolean get() = call?.normalizedNumber != null && call.crmMatch == null
+    val canRetryUpload: Boolean get() = canLog && activity?.syncStatus == SyncStatus.FAILED_PERMANENT
 }
 
 sealed interface CallDetailEvent {
@@ -55,6 +58,7 @@ sealed interface CallDetailEvent {
     data class LeadRejected(val reason: String) : CallDetailEvent
     data object LeadNameRequired : CallDetailEvent
     data object LeadNoNumber : CallDetailEvent
+    data object RetryQueued : CallDetailEvent
 }
 
 @HiltViewModel
@@ -65,6 +69,7 @@ class CallDetailViewModel @Inject constructor(
     private val setClassification: SetCallClassificationUseCase,
     private val saveLog: SaveActivityLogUseCase,
     private val createLead: CreateLeadFromCallUseCase,
+    private val retry: RetryUploadUseCase,
 ) : ViewModel() {
 
     private val callId: Long = checkNotNull(savedState[ARG_CALL_ID]) { "call id missing" }
@@ -130,6 +135,10 @@ class CallDetailViewModel @Inject constructor(
                 SaveActivityLogUseCase.Result.CallNotFound, is SaveActivityLogUseCase.Result.Invalid -> Unit
             }
         }
+    }
+
+    fun retryUpload() {
+        viewModelScope.launch { if (retry(callId)) _events.send(CallDetailEvent.RetryQueued) }
     }
 
     fun classify(classification: Classification, applyToNumber: Boolean) {

@@ -37,6 +37,7 @@ class CallDetailViewModelTest {
         useCases.setClassification,
         useCases.saveLog,
         useCases.createLead,
+        useCases.retryUpload,
     )
 
     private suspend fun businessCall(id: Long = 1) {

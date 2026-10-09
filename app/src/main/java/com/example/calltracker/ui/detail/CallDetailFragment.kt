@@ -124,6 +124,7 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.followUp.setOnClickListener { pickFollowUpDate() }
         binding.followUpLayout.setEndIconOnClickListener { viewModel.onFollowUpChanged(null) }
         binding.saveButton.setOnClickListener { viewModel.save() }
+        binding.retryUploadButton.setOnClickListener { viewModel.retryUpload() }
     }
 
     private fun EditText.watch(onChange: (String) -> Unit) = doAfterTextChanged {
@@ -176,6 +177,7 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
             renderFollowUp(binding, state.draft.followUpAt)
             renderErrors(binding, state.invalidFields)
             binding.saveButton.isEnabled = state.dirty && !state.saving
+            binding.retryUploadButton.isVisible = state.canRetryUpload && !state.dirty
 
             val activity = state.activity
             binding.syncStatus.text = if (activity?.syncStatus == SyncStatus.FAILED_PERMANENT && activity.lastSyncError != null) {
@@ -244,6 +246,7 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
             is CallDetailEvent.LeadRejected -> getString(R.string.lead_rejected, event.reason)
             CallDetailEvent.LeadNameRequired -> getString(R.string.lead_name_required)
             CallDetailEvent.LeadNoNumber -> getString(R.string.lead_no_number)
+            CallDetailEvent.RetryQueued -> getString(R.string.detail_retry_queued)
         }
         Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
     }

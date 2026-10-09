@@ -24,8 +24,12 @@ import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.SimCardSource
+import com.example.calltracker.data.remote.ActivityUploaderImpl
+import com.example.calltracker.domain.repository.ActivityUploader
+import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.sync.SweepRequester
 import com.example.calltracker.sync.SweepScheduler
+import com.example.calltracker.sync.SyncScheduler
 import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
@@ -92,4 +96,8 @@ abstract class RepositoryModule {
     @Binds abstract fun bindSimCardSource(impl: AndroidSimCardSource): SimCardSource
 
     @Binds abstract fun bindSweepRequester(impl: SweepScheduler): SweepRequester
+
+    @Binds abstract fun bindSyncRequester(impl: SyncScheduler): SyncRequester
+
+    @Binds abstract fun bindActivityUploader(impl: ActivityUploaderImpl): ActivityUploader
 }

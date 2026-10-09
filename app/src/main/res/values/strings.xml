@@ -51,6 +51,18 @@
     <string name="filter_sync_synced">Synced</string>
     <string name="filter_sync_failed">Failed</string>
     <string name="menu_rules">Number rules</string>
+    <string name="menu_upload_now">Upload now</string>
+    <string name="upload_started">Uploading when online…</string>
+    <plurals name="upload_waiting">
+        <item quantity="one">%1$d call waiting to upload</item>
+        <item quantity="other">%1$d calls waiting to upload</item>
+    </plurals>
+    <plurals name="upload_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <string name="detail_retry_upload">Retry upload</string>
+    <string name="detail_retry_queued">Queued for upload again</string>
     <string name="menu_settings">Settings</string>
 
     <!-- Call detail -->

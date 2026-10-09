@@ -46,7 +46,7 @@ class CallListViewModelTest {
     @Test
     fun `shows every call newest first with its sync state`() = runTest {
         seed()
-        val viewModel = CallListViewModel(repos, requester, SavedStateHandle())
+        val viewModel = CallListViewModel(repos, requester, repos, SavedStateHandle())
 
         viewModel.state.test {
             val state = expectMostRecentItem()
@@ -62,7 +62,7 @@ class CallListViewModelTest {
     @Test
     fun `classification and sync filters combine`() = runTest {
         seed()
-        val viewModel = CallListViewModel(repos, requester, SavedStateHandle())
+        val viewModel = CallListViewModel(repos, requester, repos, SavedStateHandle())
 
         viewModel.state.test {
             skipItems(1)
@@ -83,7 +83,7 @@ class CallListViewModelTest {
     @Test
     fun `list updates when a call changes classification`() = runTest {
         seed()
-        val viewModel = CallListViewModel(repos, requester, SavedStateHandle())
+        val viewModel = CallListViewModel(repos, requester, repos, SavedStateHandle())
         viewModel.setClassificationFilter(Classification.UNCLASSIFIED)
 
         viewModel.state.test {
@@ -97,9 +97,9 @@ class CallListViewModelTest {
     fun `filter survives process death through SavedStateHandle`() = runTest {
         seed()
         val saved = SavedStateHandle()
-        CallListViewModel(repos, requester, saved).setClassificationFilter(Classification.PERSONAL)
+        CallListViewModel(repos, requester, repos, saved).setClassificationFilter(Classification.PERSONAL)
 
-        val restored = CallListViewModel(repos, requester, saved)
+        val restored = CallListViewModel(repos, requester, repos, saved)
 
         restored.state.test {
             val state = expectMostRecentItem()
@@ -110,7 +110,7 @@ class CallListViewModelTest {
 
     @Test
     fun `refresh requests a sweep`() {
-        CallListViewModel(repos, requester, SavedStateHandle()).refresh()
+        CallListViewModel(repos, requester, repos, SavedStateHandle()).refresh()
         assertEquals(1, sweeps)
     }
 }

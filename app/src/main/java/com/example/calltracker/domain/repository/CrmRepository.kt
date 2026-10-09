@@ -13,6 +13,9 @@ interface CrmRepository {
     /** The last stored answer for [normalizedNumber], however old. No network. */
     suspend fun cached(normalizedNumber: String): CachedCrmLookup?
 
+    /** Drops the cached answer, e.g. after the CRM said the linked record no longer exists; the next lookup re-asks. */
+    suspend fun forget(normalizedNumber: String)
+
     /** Asks the CRM and caches a definite answer (match or no match). */
     suspend fun lookup(normalizedNumber: String, now: Long): CrmLookupResult
 

@@ -46,8 +46,11 @@ class SaveActivityLogUseCase @Inject constructor(
             if (call.classification != Classification.BUSINESS) return@run Result.NotBusiness
 
             val now = clock.millis()
-            activities.ensureActivity(callId, now)
-            activities.updateLog(callId, cleaned, now)
+            val current = activities.ensureActivity(callId, now)
+            // The edit is newer than the version the user was looking at, even if that version carries a timestamp
+            // from a clock that runs ahead (e.g. a CRM copy that won a conflict). Otherwise last-write-wins would
+            // silently drop every edit until this phone's clock caught up.
+            activities.updateLog(callId, cleaned, maxOf(now, current.updatedAt + 1))
             syncGate.reconcile(callId, contentChanged = true)
             Result.Saved
         }

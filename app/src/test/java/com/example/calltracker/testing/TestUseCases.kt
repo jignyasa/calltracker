@@ -13,6 +13,9 @@ import com.example.calltracker.domain.usecase.SetCallClassificationUseCase
 import com.example.calltracker.domain.usecase.SetNumberRuleUseCase
 import com.example.calltracker.domain.usecase.SetWorkSimUseCase
 import com.example.calltracker.domain.usecase.SyncGate
+import com.example.calltracker.domain.usecase.RetryUploadUseCase
+import com.example.calltracker.domain.usecase.UploadPendingActivitiesUseCase
+import com.example.calltracker.domain.repository.ActivityUploader
 import java.time.Clock
 
 /** Every use case wired to the same [FakeRepositories], the way Hilt wires them to Room in the app. */
@@ -28,4 +31,8 @@ class TestUseCases(val repos: FakeRepositories, val clock: Clock) {
     val setRule = SetNumberRuleUseCase(repos, LibPhoneNumberNormalizer(), reclassifyNumber, repos, clock)
     val deleteRule = DeleteNumberRuleUseCase(repos, reclassifyNumber, repos)
     val setWorkSim = SetWorkSimUseCase(repos, repos, reclassifier, repos, clock)
+    val retryUpload = RetryUploadUseCase(syncGate, repos)
+
+    fun upload(uploader: ActivityUploader) =
+        UploadPendingActivitiesUseCase(repos, repos, repos, uploader, repos, reclassifyNumber, syncGate, repos, clock)
 }

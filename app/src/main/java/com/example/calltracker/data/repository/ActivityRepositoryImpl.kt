@@ -42,4 +42,10 @@ class ActivityRepositoryImpl @Inject constructor(
         val rows = dao.updateLog(callId, log.notes, log.outcome, log.followUpAt, log.nextAction, log.remarks, now)
         check(rows == 1) { "No activity for call $callId" }
     }
+
+    override suspend fun setServerIdentity(callId: Long, serverId: String, version: Int?) =
+        dao.setServerIdentity(callId, serverId, version)
+
+    override suspend fun applyServerCopy(callId: Long, log: ActivityLog, updatedAt: Long, serverId: String?, version: Int?) =
+        dao.applyServerCopy(callId, log.notes, log.outcome, log.followUpAt, log.nextAction, log.remarks, updatedAt, serverId, version)
 }

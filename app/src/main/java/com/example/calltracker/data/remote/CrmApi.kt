@@ -18,4 +18,8 @@ interface CrmApi {
         @Header("Idempotency-Key") idempotencyKey: String,
         @Body request: CreateLeadRequest,
     ): Response<CreateLeadResponse>
+
+    /** Each item's `clientId` is its idempotency key; the server answers per item, always HTTP 200. */
+    @POST("api/v1/activities/batch")
+    suspend fun uploadActivities(@Body request: ActivityBatchRequest): Response<ActivityBatchResponse>
 }

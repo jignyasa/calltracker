@@ -134,5 +134,9 @@ class CrmRepositoryImplTest {
         override suspend fun upsert(entry: CrmCacheEntity) {
             rows[entry.normalizedNumber] = entry
         }
+
+        override suspend fun delete(number: String) {
+            rows.remove(number)
+        }
     }
 }

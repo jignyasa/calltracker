@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.example.calltracker.sync.SweepScheduler
+import com.example.calltracker.sync.SyncScheduler
 import com.example.calltracker.ui.notifications.PostCallNotifier
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -24,10 +25,14 @@ class CallTrackerApp : Application(), Configuration.Provider {
     @Inject
     lateinit var postCallNotifier: PostCallNotifier
 
+    @Inject
+    lateinit var syncScheduler: SyncScheduler
+
     override fun onCreate() {
         super.onCreate()
         postCallNotifier.ensureChannel()
         sweepScheduler.ensureScheduled()
+        syncScheduler.ensureScheduled()
     }
 
     override val workManagerConfiguration: Configuration

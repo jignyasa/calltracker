@@ -22,6 +22,7 @@ import com.example.calltracker.databinding.FragmentCallListBinding
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.ui.navigator
 import com.example.calltracker.ui.permissions.CallPermissions
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -75,6 +76,13 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
         val atTop = layoutManager.findFirstCompletelyVisibleItemPosition() <= 0
         adapter.submitList(state.calls) { if (atTop) binding.list.scrollToPosition(0) }
 
+        val summary = listOfNotNull(
+            state.waitingToUpload.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.upload_waiting, it, it) },
+            state.uploadFailed.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.upload_failed, it, it) },
+        ).joinToString(" · ")
+        binding.uploadSummary.text = summary
+        binding.uploadSummary.isVisible = summary.isNotEmpty()
+
         binding.empty.isVisible = !state.loading && state.calls.isEmpty()
         binding.empty.setText(if (state.filter.isActive) R.string.empty_calls_filtered else R.string.empty_calls)
         binding.classificationChips.check(
@@ -124,6 +132,10 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
                 override fun onCreateMenu(menu: Menu, inflater: MenuInflater) = inflater.inflate(R.menu.menu_call_list, menu)
 
                 override fun onMenuItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+                    R.id.action_upload_now -> true.also {
+                        viewModel.uploadNow()
+                        binding?.let { Snackbar.make(it.root, R.string.upload_started, Snackbar.LENGTH_SHORT).show() }
+                    }
                     R.id.action_rules -> true.also { navigator.openRules() }
                     R.id.action_settings -> true.also { navigator.openSettings() }
                     else -> false

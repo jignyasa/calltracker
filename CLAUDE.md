@@ -79,6 +79,14 @@ What each finished phase built and how it was verified: `docs/IMPLEMENTATION_NOT
   4xx validation → permanent (surfaced in UI). 5xx/IO → retry. 409 → server id wins, notes merged by last-write timestamp.
 - Always use **unique work** (`enqueueUniqueWork` / `enqueueUniquePeriodicWork`).
 - When a worker starts, reset stale `IN_FLIGHT` rows to PENDING (crash recovery).
+- Implementation: `SyncWorker` → `domain/usecase/UploadPendingActivitiesUseCase` (claims ≤100 via `OutboxRepository.claimBatch`,
+  every outbox update after sending is generation-guarded; re-checks BUSINESS before building `ActivityPayload`, which holds only
+  contract fields). `OutboxRepositoryImpl.enqueue` calls `SyncRequester.requestSync()` (5 s debounce so the enqueuing transaction
+  commits first; `APPEND_OR_REPLACE`, `CONNECTED`, exponential backoff); hourly periodic + a run on every app start.
+- Stale CRM link (INVALID "leadId/contactId does not exist") is healed, not failed: forget cache → reclassify number → re-queue if
+  still BUSINESS. A log save is stamped `max(now, previous updatedAt + 1)` so a CRM copy with a skewed-ahead clock can't swallow edits.
+- Unsupported call types are mapped for the CRM: BLOCKED→REJECTED, VOICEMAIL→MISSED, OTHER→INCOMING. A BUSINESS call without a
+  number fails locally (FAILED_PERMANENT) and is never sent.
 
 ## Mock CRM server
 - `/mock-server` (Node + Express 5, CommonJS, no deps beyond express; tests use `node:test`).

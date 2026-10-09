@@ -22,6 +22,8 @@ import com.example.calltracker.domain.repository.ActivityRepository
 import com.example.calltracker.domain.repository.CallRepository
 import com.example.calltracker.domain.repository.CrmRepository
 import com.example.calltracker.domain.repository.SettingsRepository
+import com.example.calltracker.domain.repository.SyncRequester
+import com.example.calltracker.domain.model.OutboxItem
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.SweepStateRepository
@@ -40,13 +42,26 @@ class FakeRepositories :
     SweepStateRepository,
     CrmRepository,
     SettingsRepository,
+    SyncRequester,
     TransactionRunner {
 
-    data class OutboxItem(val clientId: String, val status: SyncStatus, val generation: Int)
+    data class OutboxRow(
+        val clientId: String,
+        val status: SyncStatus,
+        val generation: Int,
+        val attempts: Int = 0,
+        val lastError: String? = null,
+        val enqueueOrder: Long = 0,
+    )
+
+    /** Every requestSync()/syncNow() call (the real one schedules SyncWorker). */
+    var syncRequests = 0
+        private set
+    private var enqueueCounter = 0L
 
     private val calls = MutableStateFlow<Map<Long, CallRecord>>(emptyMap())
     private val activities = MutableStateFlow<Map<Long, Activity>>(emptyMap())
-    val outbox = mutableMapOf<Long, OutboxItem>()
+    val outbox = mutableMapOf<Long, OutboxRow>()
     private val rules = MutableStateFlow<Map<String, NumberRule>>(emptyMap())
 
     fun addCall(
@@ -184,18 +199,77 @@ class FakeRepositories :
         activities.value += callId to activity.copy(log = log, updatedAt = now)
     }
 
-    private fun Activity.withSync() = copy(syncStatus = outbox[callId]?.status)
+    override suspend fun setServerIdentity(callId: Long, serverId: String, version: Int?) {
+        val activity = checkNotNull(activities.value[callId])
+        activities.value += callId to activity.copy(serverId = serverId)
+    }
+
+    override suspend fun applyServerCopy(callId: Long, log: ActivityLog, updatedAt: Long, serverId: String?, version: Int?) {
+        val activity = checkNotNull(activities.value[callId])
+        activities.value += callId to activity.copy(log = log, updatedAt = updatedAt, serverId = serverId ?: activity.serverId)
+    }
+
+    private fun Activity.withSync() = copy(syncStatus = outbox[callId]?.status, lastSyncError = outbox[callId]?.lastError)
 
     // OutboxRepository
     override suspend fun enqueue(callId: Long, clientId: String, now: Long) {
         val existing = outbox[callId]
-        outbox[callId] = OutboxItem(clientId, SyncStatus.PENDING, (existing?.generation ?: 0) + 1)
-        outboxVersion.value++
+        outbox[callId] = OutboxRow(clientId, SyncStatus.PENDING, (existing?.generation ?: 0) + 1, enqueueOrder = enqueueCounter++)
+        outboxChanged()
+        syncRequests++
     }
 
     override suspend fun removeUnsynced(callId: Long) {
         if (outbox[callId]?.status != SyncStatus.SYNCED) outbox.remove(callId)
+        outboxChanged()
+    }
+
+    override suspend fun resetInFlight(now: Long): Int {
+        val stale = outbox.filterValues { it.status == SyncStatus.IN_FLIGHT }.keys
+        stale.forEach { outbox[it] = outbox.getValue(it).copy(status = SyncStatus.PENDING) }
+        outboxChanged()
+        return stale.size
+    }
+
+    override suspend fun claimBatch(limit: Int, exclude: Set<Long>, now: Long): List<OutboxItem> {
+        val claimed = outbox.entries
+            .filter { (id, row) -> id !in exclude && row.status in setOf(SyncStatus.PENDING, SyncStatus.FAILED_RETRYABLE) }
+            .sortedWith(compareBy({ it.value.enqueueOrder }, { it.key }))
+            .take(limit)
+        claimed.forEach { (id, row) -> outbox[id] = row.copy(status = SyncStatus.IN_FLIGHT) }
+        outboxChanged()
+        return claimed.map { (id, row) -> OutboxItem(id, row.clientId, SyncStatus.IN_FLIGHT, row.generation, row.attempts, row.lastError) }
+    }
+
+    override suspend fun markSynced(callId: Long, generation: Int, now: Long): Boolean {
+        val row = outbox[callId]?.takeIf { it.generation == generation } ?: return false
+        outbox[callId] = row.copy(status = SyncStatus.SYNCED, lastError = null)
+        outboxChanged()
+        return true
+    }
+
+    override suspend fun forceSynced(callId: Long, now: Long) {
+        outbox[callId]?.let { outbox[callId] = it.copy(status = SyncStatus.SYNCED, lastError = null) }
+        outboxChanged()
+    }
+
+    override suspend fun markFailed(callId: Long, generation: Int, permanent: Boolean, error: String, now: Long): Boolean {
+        val row = outbox[callId]?.takeIf { it.generation == generation } ?: return false
+        val status = if (permanent) SyncStatus.FAILED_PERMANENT else SyncStatus.FAILED_RETRYABLE
+        outbox[callId] = row.copy(status = status, attempts = row.attempts + 1, lastError = error)
+        outboxChanged()
+        return true
+    }
+
+    private fun outboxChanged() {
         outboxVersion.value++
+        // Activities expose the outbox status too.
+        activities.value = activities.value.toMap()
+    }
+
+    // SyncRequester
+    override fun requestSync() {
+        syncRequests++
     }
 
     // NumberRuleRepository
@@ -226,6 +300,10 @@ class FakeRepositories :
     val createLeadRequests = mutableListOf<Pair<NewLead, String>>()
 
     override suspend fun cached(normalizedNumber: String): CachedCrmLookup? = crmCache[normalizedNumber]
+
+    override suspend fun forget(normalizedNumber: String) {
+        crmCache.remove(normalizedNumber)
+    }
 
     override suspend fun lookup(normalizedNumber: String, now: Long): CrmLookupResult {
         crmLookups += normalizedNumber

@@ -31,6 +31,8 @@ class CrmRepositoryImpl @Inject constructor(
             CachedCrmLookup(match = entry.toMatch(), fetchedAt = entry.fetchedAt)
         }
 
+    override suspend fun forget(normalizedNumber: String) = cache.delete(normalizedNumber)
+
     override suspend fun lookup(normalizedNumber: String, now: Long): CrmLookupResult {
         val response = call { api.lookup(normalizedNumber) } ?: return CrmLookupResult.Unavailable
         val result = when {

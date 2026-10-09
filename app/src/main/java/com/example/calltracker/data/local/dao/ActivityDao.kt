@@ -49,4 +49,25 @@ interface ActivityDao {
         remarks: String?,
         now: Long,
     ): Int
+
+    @Query("UPDATE activities SET server_id = :serverId, server_version = :version WHERE call_id = :callId")
+    suspend fun setServerIdentity(callId: Long, serverId: String, version: Int?)
+
+    /** Server copy wins a conflict: its log and timestamp replace ours; the server id is kept if none came back. */
+    @Query(
+        "UPDATE activities SET notes = :notes, outcome = :outcome, follow_up_at = :followUpAt, next_action = :nextAction, " +
+            "remarks = :remarks, updated_at = :updatedAt, server_id = COALESCE(:serverId, server_id), " +
+            "server_version = COALESCE(:version, server_version) WHERE call_id = :callId",
+    )
+    suspend fun applyServerCopy(
+        callId: Long,
+        notes: String?,
+        outcome: CallOutcome?,
+        followUpAt: Long?,
+        nextAction: String?,
+        remarks: String?,
+        updatedAt: Long,
+        serverId: String?,
+        version: Int?,
+    )
 }
