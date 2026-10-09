@@ -27,11 +27,27 @@ android {
         buildConfigField("String", "CRM_API_TOKEN", "\"${providers.gradleProperty("crmApiToken").getOrElse("dev-token")}\"")
     }
 
+    // Release signing comes from Gradle properties (e.g. ~/.gradle/gradle.properties), never from the repo.
+    // Without them the release APK is signed with the debug key so it can still be built and installed for review.
+    val releaseStore = providers.gradleProperty("releaseStoreFile").orNull
+    signingConfigs {
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = file(releaseStore)
+                storePassword = providers.gradleProperty("releaseStorePassword").get()
+                keyAlias = providers.gradleProperty("releaseKeyAlias").get()
+                keyPassword = providers.gradleProperty("releaseKeyPassword").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            // The stable switches; AGP 9.2's `optimization {}` block still needs an experimental flag.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -45,6 +61,11 @@ android {
     sourceSets {
         // Exported Room schemas, read by MigrationTestHelper (Robolectric doesn't see test-only assets, so it's on-device).
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+    lint {
+        lintConfig = file("lint.xml")
+        warningsAsErrors = true
+        abortOnError = true
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
@@ -82,6 +103,8 @@ dependencies {
     // Persistence
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
+    implementation(libs.androidx.paging.runtime)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.sqlite.ktx)
     implementation(libs.sqlcipher.android)
@@ -104,6 +127,7 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.androidx.work.testing)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.paging.testing)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.junit)

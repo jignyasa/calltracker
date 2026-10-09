@@ -1,6 +1,9 @@
 package com.example.calltracker.domain.repository
 
+import androidx.paging.PagingData
 import com.example.calltracker.domain.model.CallListEntry
+import com.example.calltracker.domain.model.CallListQuery
+import com.example.calltracker.domain.model.UploadCounts
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
@@ -12,8 +15,13 @@ import kotlinx.coroutines.flow.Flow
 interface CallRepository {
     fun observeCalls(): Flow<List<CallRecord>>
 
-    /** Newest first, each with its sync state. */
-    fun observeCallList(): Flow<List<CallListEntry>>
+    /**
+     * Newest first, each with its sync state, filtered and paged by the database so the list stays light with
+     * thousands of calls. (Paging's core is pure Kotlin, so the domain stays JVM-only.)
+     */
+    fun pagedCallList(query: CallListQuery): Flow<PagingData<CallListEntry>>
+
+    fun observeUploadCounts(): Flow<UploadCounts>
 
     suspend fun getCallsSince(since: Long): List<CallRecord>
 

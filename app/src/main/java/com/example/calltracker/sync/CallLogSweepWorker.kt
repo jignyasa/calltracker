@@ -35,7 +35,8 @@ class CallLogSweepWorker @AssistedInject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Sweep failed (attempt $runAttemptCount)", e)
+            // Type only: an exception message could carry query or provider details.
+            Log.w(TAG, "Sweep failed (attempt $runAttemptCount): ${e.javaClass.simpleName}")
             if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.failure()
         } finally {
             scheduler.armCallLogTrigger(replace = true)

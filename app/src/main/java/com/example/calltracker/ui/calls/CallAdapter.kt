@@ -3,8 +3,8 @@ package com.example.calltracker.ui.calls
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.view.isVisible
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.calltracker.R
 import com.example.calltracker.databinding.ItemCallBinding
@@ -16,12 +16,15 @@ import com.google.android.material.color.MaterialColors
 
 class CallAdapter(
     private val onClick: (CallListEntry) -> Unit,
-) : ListAdapter<CallListEntry, CallAdapter.Holder>(Diff) {
+) : PagingDataAdapter<CallListEntry, CallAdapter.Holder>(Diff) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
         Holder(ItemCallBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
-    override fun onBindViewHolder(holder: Holder, position: Int) = holder.bind(getItem(position))
+    // Placeholders are off, so a bound position always has its item.
+    override fun onBindViewHolder(holder: Holder, position: Int) {
+        getItem(position)?.let(holder::bind)
+    }
 
     inner class Holder(private val binding: ItemCallBinding) : RecyclerView.ViewHolder(binding.root) {
 

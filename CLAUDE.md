@@ -112,8 +112,17 @@ What each finished phase built and how it was verified: `docs/IMPLEMENTATION_NOT
 - `DatabaseKeyProvider`: if the Keystore-wrapped key can't be unwrapped, a new key is made and the DB is deleted
   (calls are re-read from the CallLog).
 
+## Hardening rules (Phase 7)
+- Lint runs with `warningsAsErrors`; exceptions live in `app/lint.xml`, each with its reason. Keep it at 0/0.
+- Release: R8 + resource shrinking (`app/proguard-rules.pro`; Log.v/d/i stripped). Signed with the key from Gradle properties
+  `releaseStoreFile/releaseStorePassword/releaseKeyAlias/releaseKeyPassword`, else the debug key. Never commit a keystore.
+- The call list is paged by Room (`CallDao.pagedList`, filters in SQL); never load all calls into memory for the UI.
+- Logs: counts, HTTP codes and exception *types* only; `LogHygieneTest` enforces it.
+- Battery: `ui/common/BackgroundRestrictions` + `ui/settings/OemBatteryGuide` (packages mirrored in the manifest `<queries>`,
+  checked by `OemBatteryGuideTest`).
+
 ## Commands (Windows: `gradlew.bat`, or `./gradlew` in Git Bash)
-- Build: `./gradlew assembleDebug` · Release APK: `./gradlew assembleRelease`
+- Build: `./gradlew assembleDebug` · Release APK: `./gradlew assembleRelease` (device: `-PcrmBaseUrl=http://localhost:3000/`)
 - Unit tests: `./gradlew testDebugUnitTest`
 - Single test: `./gradlew testDebugUnitTest --tests "com.example.calltracker.domain.usecase.SyncGateTest"`
 - Instrumented tests: `./gradlew connectedDebugAndroidTest` (pick a device with `ANDROID_SERIAL=emulator-5554`; AVD with an installed image: `Pixel_7_API_31`)

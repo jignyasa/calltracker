@@ -151,6 +151,23 @@
     <string name="settings_battery_ok">Battery optimisation is off for CallTracker. Calls are picked up reliably.</string>
     <string name="settings_battery_restricted">Battery optimisation may delay picking up calls. Turn it off for CallTracker.</string>
     <string name="settings_open">Open settings</string>
+    <string name="settings_battery_allow">Allow in background</string>
+    <string name="settings_oem_title">%1$s phones</string>
+    <string name="settings_oem_open">Open %1$s settings</string>
+    <string name="oem_xiaomi">Xiaomi / Redmi / POCO</string>
+    <string name="oem_oppo_realme">Oppo / Realme / OnePlus</string>
+    <string name="oem_vivo">Vivo / iQOO</string>
+    <string name="oem_samsung">Samsung</string>
+    <string name="oem_huawei">Huawei / Honor</string>
+    <string name="oem_steps_xiaomi">MIUI stops apps in the background on its own. Turn on Autostart for CallTracker, and in Battery saver choose No restrictions.</string>
+    <string name="oem_steps_oppo_realme">ColorOS stops apps in the background on its own. Allow Auto launch for CallTracker, and in Battery choose Allow background activity.</string>
+    <string name="oem_steps_vivo">Funtouch OS stops apps in the background on its own. Allow Auto-start for CallTracker, and in Background power consumption allow it to run.</string>
+    <string name="oem_steps_samsung">Samsung puts unused apps to sleep. In Battery, make sure CallTracker is not in Sleeping or Deep sleeping apps (add it to Never sleeping apps).</string>
+    <string name="oem_steps_huawei">EMUI stops apps in the background on its own. In App launch, set CallTracker to Manage manually and allow Auto-launch and Run in background.</string>
+    <string name="battery_hint_title">Don\'t miss calls</string>
+    <string name="battery_hint_text">Your phone may stop CallTracker in the background, so calls could be picked up late.</string>
+    <string name="battery_hint_fix">Fix</string>
+    <string name="battery_hint_dismiss">Not now</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_privacy_text">Only calls marked Business are uploaded. Personal and unsorted calls, contact names and the call log itself never leave this phone. The CRM is asked only whether a number is a customer.</string>
 

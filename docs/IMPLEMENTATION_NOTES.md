@@ -248,3 +248,80 @@ Run after Phase 6 was committed, to cover what had only been unit-tested. All pa
 **Fixed during these checks:** after failures, the queued upload can sit in exponential backoff for minutes, and "Upload now" was queued *behind* it. "Upload now" now **replaces** the queued run. This is safe even mid-upload: a cancelled run's IN_FLIGHT items are reset at the start of the next run, and anything the CRM already stored comes back as DUPLICATE.
 
 **Test tooling:** the debug seeder's `bulk` action takes `--es number +9190000NNNNN`, so a whole backlog can come from one number.
+
+---
+
+## Phase 7: Hardening (2026-10-09)
+
+### Lint clean, and kept clean
+- **Fixed:** an unused colour, the unnecessary `mipmap-anydpi-v26` folder, and the key-storage prefs write (now KTX `edit(commit = true)`; `commit` on purpose, so the key is on disk before the database is created with it). core-ktx was bumped to 1.19.1.
+- **`app/lint.xml`, with a reason per exception:**
+  - targetSdk stays at 36: raising it opts into a new release's behaviour changes, which needs its own review.
+  - "Newer version available" notices are informational, so a library release can't break the build.
+  - AGP 9.4.1 needs Gradle 9.6, which is a separate upgrade, so the project stays on AGP 9.2.1.
+- **Lint now runs with `warningsAsErrors`.** Result: **0 errors, 0 warnings.**
+
+### Release build
+- **R8:** code and resource shrinking, with `proguard-rules.pro` keeping SQLCipher's JNI classes. Release builds strip `Log.v/d/i` entirely.
+- **Size:** 10.5 MB, against 18.5 MB for debug. Most of the rest is SQLCipher's native libraries.
+- **Checked in the release APK:** no debug seeder, no `WRITE_CALL_LOG`, not debuggable, `allowBackup=false`.
+- **Signing:**
+  - With `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias` and `releaseKeyPassword` as Gradle properties (e.g. in `~/.gradle/gradle.properties`, never in the repo), the release build uses that key.
+  - Without them it is signed with the debug key, so reviewers can still install it.
+- **Build:** `./gradlew assembleRelease`. For a physical device add `-PcrmBaseUrl=http://localhost:3000/` and run `adb reverse tcp:3000 tcp:3000`.
+
+### Background reliability (battery)
+- **Settings → Background reliability:**
+  - The battery-optimisation status.
+  - **Allow in background**, which shows the system "Stop optimising battery usage?" prompt (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`). Call capture is the app's core function and must run after every call, which is the case this prompt is meant for.
+  - On a phone from a known maker, that maker's extra steps and an **Open … settings** button (`OemBatteryGuide`):
+    - Xiaomi / Redmi / POCO
+    - Oppo / Realme / OnePlus
+    - Vivo / iQOO
+    - Samsung
+    - Huawei / Honor
+
+    Each maker has several known screens, tried in order (they move between OS versions). If none opens, the app's system info page opens instead. The packages are declared in the manifest's `<queries>`; a unit test keeps that list and the guide in sync.
+- **Call list:** a "Don't miss calls" card while the app is battery-optimised, with **Fix** (→ Settings) and **Not now** (remembered). It disappears once the app is exempt.
+
+### Large call volumes
+- **The call list is paged by the database** (Paging 3.5.2 + room-paging, 40 rows per page), and its filters run in SQL. Before, every call was loaded and filtered in memory.
+- **The upload summary is one SQL aggregate** (`CallDao.observeUploadCounts`) instead of counting a full list.
+- Everything else was already bounded:
+
+| Part | Bound |
+|---|---|
+| Sweep | pages of 200 |
+| CRM lookups | ≤ 50 per run |
+| Uploads | ≤ 100 per batch, ≤ 1000 per run |
+| Post-call questions | ≤ 3 |
+
+### No call data in logs
+- **Audit:** every log line in the app prints only counts, HTTP status codes or exception *types*. The two places that logged a whole exception (whose message could carry details) now log just its type.
+- **`LogHygieneTest`** fails the build if a log statement interpolates a number, name, notes, payload or request field, or passes a Throwable (except key-unwrap failures, which carry no user data).
+- **Debug network log:** BASIC level with the `phone` value redacted. The release build has no network log.
+
+### Checked
+- **130 JVM tests**, including:
+  - paged list filters and order against real Room SQL
+  - upload counts
+  - the paged ViewModel (`asSnapshot`)
+  - the phone-maker guide and its manifest sync
+  - log hygiene
+- **Release APK on the Samsung A50, against the mock CRM.** Seeded 65 calls (40 + 15 from two CRM leads, 10 unknown) with call-log access off, then installed the **release** build:
+
+| Check | Result |
+|---|---|
+| Within **7 s** of opening: imported, looked up, classified and uploaded | ✅ CRM received **40 + 15 = 55**; the 10 unknown numbers were never sent |
+| Encrypted database, Hilt, WorkManager and Retrofit under R8 | ✅ |
+| Release logging | ✅ no app info logs, no network log |
+| Exactly 3 after-call questions (newest unknown calls) | ✅ |
+| Paged list: 60 flings reached calls from hours earlier, past hundreds of rows | ✅ no ANR or crash |
+| Battery card shown while optimised | ✅ |
+| Settings shows the Samsung section; "Allow in background" opens the system prompt | ✅ |
+| "Open Samsung settings" opens Samsung's own Battery screen | ✅ |
+| Once allowed, Settings says "Battery optimisation is off" and the card hides | ✅ |
+
+### Known limitations
+- **Phone-maker screens** were verified on Samsung only. The others come from their published component names and fall back to the app's info page.
+- **The release APK is debug-signed** unless a keystore is configured.

@@ -2,7 +2,14 @@ package com.example.calltracker.testing
 
 import com.example.calltracker.domain.model.Activity
 import com.example.calltracker.domain.model.ActivityLog
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.testing.asPagingSourceFactory
+import kotlinx.coroutines.flow.flatMapLatest
 import com.example.calltracker.domain.model.CallListEntry
+import com.example.calltracker.domain.model.CallListQuery
+import com.example.calltracker.domain.model.UploadCounts
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.CallType
@@ -106,10 +113,29 @@ class FakeRepositories :
     /** Shared with the outbox map: re-emits when [outboxVersion] is bumped by enqueue/remove. */
     private val outboxVersion = MutableStateFlow(0)
 
-    override fun observeCallList(): Flow<List<CallListEntry>> =
+    /**
+     * Same filter and order as `CallDao.pagedList`, through a real PagingSource that is replaced whenever the data
+     * changes, like Room invalidating its source.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    override fun pagedCallList(query: CallListQuery): Flow<PagingData<CallListEntry>> =
         kotlinx.coroutines.flow.combine(calls, outboxVersion) { map, _ ->
-            map.values.sortedByDescending { it.startedAt }.map { CallListEntry(it, outbox[it.id]?.status) }
+            map.values
+                .sortedWith(compareByDescending<CallRecord> { it.startedAt }.thenByDescending { it.id })
+                .map { CallListEntry(it, outbox[it.id]?.status) }
+                .filter { query.classification == null || it.call.classification == query.classification }
+                .filter { query.syncStatuses == null || it.syncStatus in query.syncStatuses }
+        }.flatMapLatest { entries ->
+            Pager(PagingConfig(pageSize = 40), pagingSourceFactory = entries.asPagingSourceFactory()).flow
         }
+
+    override fun observeUploadCounts(): Flow<UploadCounts> = outboxVersion.map {
+        val statuses = outbox.values.map { it.status }
+        UploadCounts(
+            waiting = statuses.count { it in setOf(SyncStatus.PENDING, SyncStatus.IN_FLIGHT, SyncStatus.FAILED_RETRYABLE) },
+            failed = statuses.count { it == SyncStatus.FAILED_PERMANENT },
+        )
+    }
 
     override suspend fun getCallsSince(since: Long): List<CallRecord> =
         calls.value.values.filter { it.startedAt >= since }.sortedByDescending { it.startedAt }
@@ -334,6 +360,12 @@ class FakeRepositories :
     override suspend fun workSimSlot(): Int? = workSim.value
     override suspend fun setWorkSimSlot(slot: Int?) {
         workSim.value = slot
+    }
+
+    private val batteryHintDismissed = MutableStateFlow(false)
+    override fun observeBatteryHintDismissed(): Flow<Boolean> = batteryHintDismissed
+    override suspend fun dismissBatteryHint() {
+        batteryHintDismissed.value = true
     }
 
     // TransactionRunner

@@ -39,7 +39,7 @@ class PostCallActionReceiver : BroadcastReceiver() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Classifying from the notification failed", e)
+                Log.w(TAG, "Classifying from the notification failed: ${e.javaClass.simpleName}")
             } finally {
                 pending.finish()
             }

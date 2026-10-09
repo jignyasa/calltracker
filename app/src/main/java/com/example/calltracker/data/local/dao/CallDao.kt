@@ -3,6 +3,7 @@ package com.example.calltracker.data.local.dao
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Embedded
+import androidx.paging.PagingSource
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -19,17 +20,36 @@ data class CallWithSync(
     @ColumnInfo(name = "sync_status") val syncStatus: SyncStatus?,
 )
 
+data class UploadCountsRow(
+    @ColumnInfo(name = "waiting") val waiting: Int,
+    @ColumnInfo(name = "failed") val failed: Int,
+)
+
 @Dao
 interface CallDao {
 
     @Query("SELECT * FROM calls ORDER BY started_at DESC")
     fun observeAll(): Flow<List<CallEntity>>
 
+    /** The call list, filtered in SQL. [anySync] = true ignores [statuses] (Room needs a list either way). */
     @Query(
-        "SELECT c.*, o.status AS sync_status FROM calls c LEFT JOIN outbox o ON o.call_id = c.id " +
-            "ORDER BY c.started_at DESC",
+        """
+        SELECT c.*, o.status AS sync_status FROM calls c LEFT JOIN outbox o ON o.call_id = c.id
+        WHERE (:classification IS NULL OR c.classification = :classification)
+          AND (:anySync OR o.status IN (:statuses))
+        ORDER BY c.started_at DESC, c.id DESC
+        """,
     )
-    fun observeListWithSync(): Flow<List<CallWithSync>>
+    fun pagedList(classification: Classification?, anySync: Boolean, statuses: List<SyncStatus>): PagingSource<Int, CallWithSync>
+
+    @Query(
+        """
+        SELECT COALESCE(SUM(status IN ('PENDING', 'IN_FLIGHT', 'FAILED_RETRYABLE')), 0) AS waiting,
+               COALESCE(SUM(status = 'FAILED_PERMANENT'), 0) AS failed
+        FROM outbox
+        """,
+    )
+    fun observeUploadCounts(): Flow<UploadCountsRow>
 
     @Query("SELECT * FROM calls WHERE started_at >= :since ORDER BY started_at DESC")
     suspend fun getSince(since: Long): List<CallEntity>

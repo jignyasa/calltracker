@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lint runs with warningsAsErrors (app/build.gradle.kts). Exceptions, each with its reason: -->
+<lint>
+    <!-- targetSdk is pinned to 36 on purpose (CLAUDE.md): raising it opts into a new release's behaviour changes,
+         which needs its own review and device pass, not a lint fix. -->
+    <issue id="OldTargetApi" severity="ignore" />
+
+    <!-- "A newer version exists" changes whenever a library ships; it must not break the build. Upgrades are done
+         deliberately through the version catalog. -->
+    <issue id="GradleDependency" severity="informational" />
+    <issue id="AndroidGradlePluginVersion" severity="informational" />
+    <issue id="NewerVersionAvailable" severity="informational" />
+</lint>

@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
 import android.widget.RadioButton
@@ -17,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentSettingsBinding
+import com.example.calltracker.ui.common.BackgroundRestrictions
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -42,8 +42,15 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     .putExtra(Settings.EXTRA_APP_PACKAGE, requireContext().packageName),
             )
         }
-        // The system list of apps: the user picks CallTracker → "Don't optimise". Phase 7 adds OEM-specific screens.
-        binding.batteryButton.setOnClickListener { open(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+        binding.batteryButton.setOnClickListener { BackgroundRestrictions.requestIgnoreBatteryOptimizations(requireContext()) }
+        BackgroundRestrictions.oemGuide?.let { guide ->
+            val brand = getString(guide.brand)
+            binding.oemSection.isVisible = true
+            binding.oemTitle.text = getString(R.string.settings_oem_title, brand)
+            binding.oemSteps.setText(guide.steps)
+            binding.oemButton.text = getString(R.string.settings_oem_open, brand)
+            binding.oemButton.setOnClickListener { BackgroundRestrictions.openOemSettings(requireContext(), guide) }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -68,9 +75,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val context = requireContext()
         val notificationsOn = NotificationManagerCompat.from(context).areNotificationsEnabled()
         binding.notificationStatus.setText(if (notificationsOn) R.string.settings_notifications_on else R.string.settings_notifications_off)
-        val power = context.getSystemService(PowerManager::class.java)
-        val unrestricted = power?.isIgnoringBatteryOptimizations(context.packageName) == true
+        val unrestricted = BackgroundRestrictions.isIgnoringBatteryOptimizations(context)
         binding.batteryStatus.setText(if (unrestricted) R.string.settings_battery_ok else R.string.settings_battery_restricted)
+        binding.batteryButton.isVisible = !unrestricted
     }
 
     override fun onDestroyView() {

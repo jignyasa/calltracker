@@ -41,11 +41,25 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeBatteryHintDismissed(): Flow<Boolean> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_BATTERY_HINT_DISMISSED) trySend(prefs.getBoolean(KEY_BATTERY_HINT_DISMISSED, false))
+        }
+        trySend(prefs.getBoolean(KEY_BATTERY_HINT_DISMISSED, false))
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.flowOn(io)
+
+    override suspend fun dismissBatteryHint() = withContext(io) {
+        prefs.edit { putBoolean(KEY_BATTERY_HINT_DISMISSED, true) }
+    }
+
     private fun readWorkSimSlot(): Int? =
         if (prefs.contains(KEY_WORK_SIM_SLOT)) prefs.getInt(KEY_WORK_SIM_SLOT, 0) else null
 
     private companion object {
         const val PREFS = "settings"
         const val KEY_WORK_SIM_SLOT = "work_sim_slot"
+        const val KEY_BATTERY_HINT_DISMISSED = "battery_hint_dismissed"
     }
 }

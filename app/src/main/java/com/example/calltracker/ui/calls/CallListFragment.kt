@@ -16,14 +16,18 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentCallListBinding
 import com.example.calltracker.domain.model.Classification
+import com.example.calltracker.ui.common.BackgroundRestrictions
 import com.example.calltracker.ui.navigator
 import com.example.calltracker.ui.permissions.CallPermissions
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -35,6 +39,8 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
 
     /** Set when the system won't show the dialog any more ("Don't ask again"); the button then opens app settings. */
     private var sendToSettings = false
+
+    private var batteryRestricted = false
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (CallPermissions.hasRequired(requireContext())) {
@@ -49,12 +55,21 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
         val binding = FragmentCallListBinding.bind(view).also { binding = it }
         binding.list.adapter = adapter
         binding.grantButton.setOnClickListener { requestPermissions() }
+        binding.batteryFix.setOnClickListener { navigator.openSettings() }
+        binding.batteryDismiss.setOnClickListener { viewModel.dismissBatteryHint() }
         bindFilters(binding)
+        keepNewestCallsInView(binding)
         addMenu()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.state.collect { state -> render(binding, state) }
+                launch { viewModel.state.collect { state -> render(binding, state) } }
+                launch { viewModel.calls.collectLatest(adapter::submitData) }
+                launch {
+                    adapter.loadStateFlow.collect { loads ->
+                        binding.empty.isVisible = loads.refresh is LoadState.NotLoading && adapter.itemCount == 0
+                    }
+                }
             }
         }
     }
@@ -62,7 +77,29 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
     override fun onStart() {
         super.onStart()
         updatePermissionCard()
+        // The user may come back from the battery settings: re-check every time.
+        batteryRestricted = !BackgroundRestrictions.isIgnoringBatteryOptimizations(requireContext())
+        binding?.let { updateBatteryCard(it, viewModel.state.value) }
         if (CallPermissions.hasRequired(requireContext())) viewModel.refresh()
+    }
+
+    /** New calls arrive at the top; if the user is looking at the top, keep them there instead of above the fold. */
+    private fun keepNewestCallsInView(binding: FragmentCallListBinding) {
+        var atTop = true
+        binding.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                atTop = (recyclerView.layoutManager as LinearLayoutManager).findFirstCompletelyVisibleItemPosition() <= 0
+            }
+        })
+        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                if (positionStart == 0 && atTop) binding.list.scrollToPosition(0)
+            }
+        })
+    }
+
+    private fun updateBatteryCard(binding: FragmentCallListBinding, state: CallListUiState) {
+        binding.batteryCard.isVisible = batteryRestricted && !state.batteryHintDismissed
     }
 
     override fun onDestroyView() {
@@ -71,11 +108,7 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
     }
 
     private fun render(binding: FragmentCallListBinding, state: CallListUiState) {
-        // New calls arrive at the top; if the user is looking at the top, keep them there instead of above the fold.
-        val layoutManager = binding.list.layoutManager as LinearLayoutManager
-        val atTop = layoutManager.findFirstCompletelyVisibleItemPosition() <= 0
-        adapter.submitList(state.calls) { if (atTop) binding.list.scrollToPosition(0) }
-
+        updateBatteryCard(binding, state)
         val summary = listOfNotNull(
             state.waitingToUpload.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.upload_waiting, it, it) },
             state.uploadFailed.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.upload_failed, it, it) },
@@ -83,7 +116,6 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
         binding.uploadSummary.text = summary
         binding.uploadSummary.isVisible = summary.isNotEmpty()
 
-        binding.empty.isVisible = !state.loading && state.calls.isEmpty()
         binding.empty.setText(if (state.filter.isActive) R.string.empty_calls_filtered else R.string.empty_calls)
         binding.classificationChips.check(
             when (state.filter.classification) {

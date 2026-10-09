@@ -3,7 +3,13 @@ package com.example.calltracker.data.repository
 import com.example.calltracker.data.local.dao.CallDao
 import com.example.calltracker.data.local.entity.CallEntity
 import com.example.calltracker.data.local.toDomain
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.example.calltracker.domain.model.CallListEntry
+import com.example.calltracker.domain.model.CallListQuery
+import com.example.calltracker.domain.model.UploadCounts
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
@@ -23,8 +29,13 @@ class CallRepositoryImpl @Inject constructor(
 
     override fun observeCalls(): Flow<List<CallRecord>> = dao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override fun observeCallList(): Flow<List<CallListEntry>> =
-        dao.observeListWithSync().map { list -> list.map { CallListEntry(it.call.toDomain(), it.syncStatus) } }
+    override fun pagedCallList(query: CallListQuery): Flow<PagingData<CallListEntry>> =
+        Pager(PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false)) {
+            dao.pagedList(query.classification, anySync = query.syncStatuses == null, statuses = query.syncStatuses.orEmpty().toList())
+        }.flow.map { page -> page.map { CallListEntry(it.call.toDomain(), it.syncStatus) } }
+
+    override fun observeUploadCounts(): Flow<UploadCounts> =
+        dao.observeUploadCounts().map { UploadCounts(waiting = it.waiting, failed = it.failed) }
 
     override suspend fun getCallsSince(since: Long): List<CallRecord> = dao.getSince(since).map { it.toDomain() }
 
@@ -81,5 +92,10 @@ class CallRepositoryImpl @Inject constructor(
         val ids = dao.idsOverridableByRule(normalizedNumber)
         if (ids.isNotEmpty()) dao.applyRule(ids, classification, clock.millis())
         return ids
+    }
+
+    private companion object {
+        /** About two screens of rows; enough to scroll smoothly, small enough to load fast on cheap phones. */
+        const val PAGE_SIZE = 40
     }
 }

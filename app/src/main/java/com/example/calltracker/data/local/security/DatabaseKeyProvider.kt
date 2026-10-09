@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import android.util.Log
+import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -50,7 +51,8 @@ class DatabaseKeyProvider @Inject constructor(
             }
         }
         val raw = ByteArray(KEY_BYTES).also { SecureRandom().nextBytes(it) }
-        prefs.edit().putString(PREF_WRAPPED_KEY, wrap(raw)).commit()
+        // commit, not apply: the key must be on disk before the database is created with it.
+        prefs.edit(commit = true) { putString(PREF_WRAPPED_KEY, wrap(raw)) }
         return Key.Created(toPassphrase(raw))
     }
 

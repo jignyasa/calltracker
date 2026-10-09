@@ -1,6 +1,9 @@
 package com.example.calltracker.data.local
 
 import android.content.Context
+import androidx.paging.PagingConfig
+import androidx.paging.PagingSource
+import androidx.paging.testing.TestPager
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -96,6 +99,34 @@ class DatabaseTest {
         // Most recent call first: +…01 has call 8.
         assertEquals(listOf("+919000000001", "+919000000003"), numbers)
         assertEquals(emptyList<String>(), dao.numbersNeedingCrmLookup(since = base + 100, staleBefore = base - 1, limit = 10))
+    }
+
+    @Test
+    fun pagedCallListFiltersInSqlAndCountsUploads() = runTest {
+        val dao = db.callDao()
+        val business = dao.insertIgnore(call(1, classification = Classification.BUSINESS, source = ClassificationSource.CRM_MATCH))
+        val failed = dao.insertIgnore(call(2, classification = Classification.BUSINESS, source = ClassificationSource.CRM_MATCH))
+        dao.insertIgnore(call(3, classification = Classification.PERSONAL, source = ClassificationSource.DEVICE_CONTACT))
+        repeat(60) { dao.insertIgnore(call(100L + it)) } // unclassified backlog
+        db.outboxDao().enqueue(business, "client-1", now = 1)
+        db.outboxDao().enqueue(failed, "client-2", now = 1)
+        db.outboxDao().markFailed(failed, generation = 1, status = SyncStatus.FAILED_PERMANENT, error = "x", now = 2)
+
+        suspend fun page(classification: Classification?, statuses: Set<SyncStatus>?) =
+            (TestPager(PagingConfig(pageSize = 40, initialLoadSize = 40, enablePlaceholders = false), dao.pagedList(classification, statuses == null, statuses.orEmpty().toList()))
+                .refresh() as PagingSource.LoadResult.Page).data
+
+        val first = page(null, null)
+        assertEquals("first page only", 40, first.size)
+        assertEquals("newest first", 159L, first.first().call.callLogId)
+        assertEquals(listOf(failed, business), page(Classification.BUSINESS, null).map { it.call.id })
+        assertEquals(listOf(failed), page(null, setOf(SyncStatus.FAILED_PERMANENT)).map { it.call.id })
+        assertEquals(SyncStatus.PENDING, page(Classification.BUSINESS, setOf(SyncStatus.PENDING)).single().syncStatus)
+        assertTrue(page(Classification.PERSONAL, setOf(SyncStatus.SYNCED)).isEmpty())
+
+        val counts = dao.observeUploadCounts().first()
+        assertEquals(1, counts.waiting)
+        assertEquals(1, counts.failed)
     }
 
     @Test
