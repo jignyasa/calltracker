@@ -1,8 +1,13 @@
 package com.example.calltracker.domain.usecase
 
 import com.example.calltracker.data.phone.LibPhoneNumberNormalizer
+import com.example.calltracker.domain.model.CachedCrmLookup
+import com.example.calltracker.domain.model.CallLogEntry
+import com.example.calltracker.domain.model.CallType
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
+import com.example.calltracker.domain.model.CrmMatch
+import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.SweepWatermark
 import com.example.calltracker.testing.FakeCallLogSource
 import com.example.calltracker.testing.FakeRepositories
@@ -26,9 +31,10 @@ class SweepCallLogUseCaseTest {
     private val sweep = SweepCallLogUseCase(
         source = callLog,
         calls = repos,
-        rules = repos,
+        settings = repos,
         sweepState = repos,
         normalizer = LibPhoneNumberNormalizer(),
+        gatherSignals = GatherClassificationSignals(repos, repos),
         classify = ClassifyCallUseCase(),
         syncGate = SyncGate(repos, repos, repos, clock),
         transaction = repos,
@@ -66,7 +72,6 @@ class SweepCallLogUseCaseTest {
         assertEquals(listOf(1L, 4L), repos.allCalls.map { it.callLogId })
     }
 
-
     @Test
     fun `numbers are normalized and classified on import`() = runTest {
         callLog.add(id = 1, startedAt = now - minute, number = "098765 43210")
@@ -94,6 +99,36 @@ class SweepCallLogUseCaseTest {
         val call = repos.allCalls.single()
         assertEquals(ClassificationSource.USER_RULE, call.classificationSource)
         assertEquals(setOf(call.id), repos.outbox.keys)
+    }
+
+    @Test
+    fun `a cached CRM match makes a saved contact BUSINESS without any network call`() = runTest {
+        val match = CrmMatch(CrmRecordType.CONTACT, "con_1", "Ananya", "Sharma Traders")
+        repos.crmCache["+919876543210"] = CachedCrmLookup(match, now - TimeUnit.DAYS.toMillis(3))
+        callLog.add(id = 1, startedAt = now - minute, number = "9876543210", cachedName = "Ananya (saved)")
+
+        sweep()
+
+        val call = repos.allCalls.single()
+        assertEquals(Classification.BUSINESS, call.classification)
+        assertEquals(ClassificationSource.CRM_MATCH, call.classificationSource)
+        assertEquals(match, call.crmMatch)
+        assertEquals(setOf(call.id), repos.outbox.keys)
+        assertTrue(repos.crmLookups.isEmpty())
+    }
+
+    @Test
+    fun `calls on the work SIM are BUSINESS, other SIM falls through`() = runTest {
+        repos.setWorkSimSlot(1)
+        callLog.rows += CallLogEntry(1, "9000000001", null, CallType.OUTGOING, now - minute, 30, "acc", simSlot = 1)
+        callLog.rows += CallLogEntry(2, "9000000002", null, CallType.OUTGOING, now - minute, 30, "acc", simSlot = 0)
+
+        sweep()
+
+        val (work, other) = repos.allCalls
+        assertEquals(ClassificationSource.WORK_SIM, work.classificationSource)
+        assertEquals(Classification.BUSINESS, work.classification)
+        assertEquals(Classification.UNCLASSIFIED, other.classification)
     }
 
     @Test

@@ -4,6 +4,7 @@ import android.content.Context
 import android.text.format.DateUtils
 import androidx.annotation.StringRes
 import com.example.calltracker.R
+import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.CallType
 
 object Formatters {
@@ -23,6 +24,13 @@ object Formatters {
         } else {
             context.getString(R.string.duration_minutes, seconds / 60, seconds % 60)
         }
+
+    /** CRM name, else the device contact name, else the number as dialled. */
+    fun displayName(context: Context, call: CallRecord): String =
+        call.crmMatch?.name
+            ?: call.deviceContactName
+            ?: call.rawNumber?.takeIf { call.normalizedNumber != null }
+            ?: context.getString(R.string.call_private_number)
 
     @StringRes
     fun callTypeLabel(type: CallType): Int = when (type) {

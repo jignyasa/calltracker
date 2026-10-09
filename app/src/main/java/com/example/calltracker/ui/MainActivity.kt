@@ -1,7 +1,9 @@
 package com.example.calltracker.ui
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -12,6 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,5 +28,24 @@ class MainActivity : AppCompatActivity() {
             insets
         }
         setSupportActionBar(binding.toolbar)
+        if (savedInstanceState == null) handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent.action != ACTION_LOG_CALL) return
+        val callId = intent.getLongExtra(EXTRA_CALL_ID, -1)
+        if (callId >= 0) viewModel.onLogCallRequested(callId)
+        // Consumed: a rotation or a return from recents must not re-run it.
+        intent.action = Intent.ACTION_MAIN
+    }
+
+    companion object {
+        const val ACTION_LOG_CALL = "com.example.calltracker.action.LOG_CALL"
+        const val EXTRA_CALL_ID = "call_id"
     }
 }

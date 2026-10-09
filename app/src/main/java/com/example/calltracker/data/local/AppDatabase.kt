@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.calltracker.data.local.dao.ActivityDao
 import com.example.calltracker.data.local.dao.CallDao
+import com.example.calltracker.data.local.dao.CrmCacheDao
 import com.example.calltracker.data.local.dao.NumberRuleDao
 import com.example.calltracker.data.local.dao.OutboxDao
 import com.example.calltracker.data.local.dao.SweepStateDao
@@ -32,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun outboxDao(): OutboxDao
     abstract fun numberRuleDao(): NumberRuleDao
     abstract fun sweepStateDao(): SweepStateDao
+    abstract fun crmCacheDao(): CrmCacheDao
 
     companion object {
         const val NAME = "calltracker.db"

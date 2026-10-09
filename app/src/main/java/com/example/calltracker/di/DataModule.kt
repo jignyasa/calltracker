@@ -8,16 +8,20 @@ import com.example.calltracker.data.local.security.DatabaseKeyProvider
 import com.example.calltracker.data.phone.LibPhoneNumberNormalizer
 import com.example.calltracker.data.repository.ActivityRepositoryImpl
 import com.example.calltracker.data.repository.CallRepositoryImpl
+import com.example.calltracker.data.repository.CrmRepositoryImpl
 import com.example.calltracker.data.repository.NumberRuleRepositoryImpl
 import com.example.calltracker.data.repository.OutboxRepositoryImpl
 import com.example.calltracker.data.repository.RoomTransactionRunner
+import com.example.calltracker.data.repository.SettingsRepositoryImpl
 import com.example.calltracker.data.repository.SweepStateRepositoryImpl
 import com.example.calltracker.domain.phone.PhoneNumberNormalizer
 import com.example.calltracker.domain.repository.ActivityRepository
 import com.example.calltracker.domain.repository.CallLogSource
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.CrmRepository
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
+import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
@@ -48,6 +52,8 @@ object DatabaseModule {
 
     @Provides fun provideSweepStateDao(db: AppDatabase) = db.sweepStateDao()
 
+    @Provides fun provideCrmCacheDao(db: AppDatabase) = db.crmCacheDao()
+
     @Provides
     @Singleton
     fun providePhoneNumberNormalizer(): PhoneNumberNormalizer = LibPhoneNumberNormalizer()
@@ -74,4 +80,8 @@ abstract class RepositoryModule {
     @Binds abstract fun bindSweepStateRepository(impl: SweepStateRepositoryImpl): SweepStateRepository
 
     @Binds abstract fun bindCallLogSource(impl: AndroidCallLogSource): CallLogSource
+
+    @Binds abstract fun bindCrmRepository(impl: CrmRepositoryImpl): CrmRepository
+
+    @Binds abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 }

@@ -16,6 +16,7 @@ class CallLogSweepWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val sweep: SweepCallLogUseCase,
     private val scheduler: SweepScheduler,
+    private val crmLookup: CrmLookupScheduler,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -27,6 +28,7 @@ class CallLogSweepWorker @AssistedInject constructor(
                 }
                 is SweepCallLogUseCase.Result.Completed -> {
                     Log.i(TAG, "Swept ${result.scanned} rows, imported ${result.imported.size}")
+                    if (result.imported.isNotEmpty()) crmLookup.resolveAfterSweep(result.imported)
                     Result.success()
                 }
             }

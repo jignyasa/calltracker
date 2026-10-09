@@ -20,8 +20,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Emulator loopback to the mock CRM server in /mock-server.
-        buildConfigField("String", "CRM_BASE_URL", "\"http://10.0.2.2:3000/\"")
+        // Mock CRM server in /mock-server. Default: emulator loopback. Physical device over USB:
+        // `adb reverse tcp:3000 tcp:3000` and build with -PcrmBaseUrl=http://localhost:3000/
+        val crmBaseUrl = providers.gradleProperty("crmBaseUrl").getOrElse("http://10.0.2.2:3000/")
+        buildConfigField("String", "CRM_BASE_URL", "\"$crmBaseUrl\"")
+        buildConfigField("String", "CRM_API_TOKEN", "\"${providers.gradleProperty("crmApiToken").getOrElse("dev-token")}\"")
     }
 
     buildTypes {

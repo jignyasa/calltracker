@@ -8,11 +8,19 @@ import com.example.calltracker.domain.model.CallType
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationDecision
 import com.example.calltracker.domain.model.ClassificationSource
+import com.example.calltracker.domain.model.CachedCrmLookup
+import com.example.calltracker.domain.model.CreateLeadResult
+import com.example.calltracker.domain.model.CrmLookupResult
+import com.example.calltracker.domain.model.CrmMatch
+import com.example.calltracker.domain.model.CrmRecordType
+import com.example.calltracker.domain.model.NewLead
 import com.example.calltracker.domain.model.NumberRule
 import com.example.calltracker.domain.model.SweepWatermark
 import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.repository.ActivityRepository
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.CrmRepository
+import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.SweepStateRepository
@@ -29,6 +37,8 @@ class FakeRepositories :
     OutboxRepository,
     NumberRuleRepository,
     SweepStateRepository,
+    CrmRepository,
+    SettingsRepository,
     TransactionRunner {
 
     data class OutboxItem(val clientId: String, val status: SyncStatus, val generation: Int)
@@ -43,18 +53,21 @@ class FakeRepositories :
         number: String? = "+919876543210",
         classification: Classification = Classification.UNCLASSIFIED,
         source: ClassificationSource = ClassificationSource.NONE,
+        deviceContactName: String? = null,
+        simSlot: Int? = null,
+        startedAt: Long = 1_790_000_000_000 + id,
     ): CallRecord {
         val call = CallRecord(
             id = id,
             callLogId = id,
             rawNumber = number,
             normalizedNumber = number,
-            deviceContactName = null,
+            deviceContactName = deviceContactName,
             type = CallType.OUTGOING,
-            startedAt = 1_790_000_000_000 + id,
+            startedAt = startedAt,
             durationSec = 60,
             phoneAccountId = null,
-            simSlot = null,
+            simSlot = simSlot,
             classification = classification,
             classificationSource = source,
             crmMatch = null,
@@ -76,6 +89,7 @@ class FakeRepositories :
         entry: CallLogEntry,
         normalizedNumber: String?,
         decision: ClassificationDecision,
+        crmMatch: CrmMatch?,
         now: Long,
     ): Long? {
         if (calls.value.values.any { it.callLogId == entry.callLogId && it.startedAt == entry.startedAt }) return null
@@ -93,9 +107,35 @@ class FakeRepositories :
             simSlot = entry.simSlot,
             classification = decision.classification,
             classificationSource = decision.source,
-            crmMatch = null,
+            crmMatch = crmMatch,
         )
         return id
+    }
+
+    override suspend fun getCallsForNumber(normalizedNumber: String): List<CallRecord> =
+        calls.value.values.filter { it.normalizedNumber == normalizedNumber }.sortedByDescending { it.startedAt }
+
+    override suspend fun setCrmMatch(normalizedNumber: String, match: CrmMatch?) {
+        calls.value = calls.value.mapValues { (_, call) ->
+            if (call.normalizedNumber == normalizedNumber) call.copy(crmMatch = match) else call
+        }
+    }
+
+    override suspend fun numbersNeedingCrmLookup(since: Long, staleBefore: Long, limit: Int): List<String> {
+        val personalByHand = calls.value.values
+            .filter { it.classificationSource == ClassificationSource.USER_MANUAL && it.classification == Classification.PERSONAL }
+            .mapNotNull { it.normalizedNumber }.toSet()
+        val personalRules = rules.value.values.filter { it.classification == Classification.PERSONAL }.map { it.normalizedNumber }
+        return calls.value.values
+            .filter { it.normalizedNumber != null && it.startedAt >= since }
+            .groupBy { it.normalizedNumber!! }
+            .filterKeys { number ->
+                val cached = crmCache[number]
+                (cached == null || cached.fetchedAt < staleBefore) && number !in personalByHand && number !in personalRules
+            }
+            .entries.sortedByDescending { (_, list) -> list.maxOf { it.startedAt } }
+            .map { it.key }
+            .take(limit)
     }
 
     val allCalls: List<CallRecord> get() = calls.value.values.sortedBy { it.id }
@@ -158,6 +198,47 @@ class FakeRepositories :
     override suspend fun get(): SweepWatermark? = watermark
     override suspend fun save(watermark: SweepWatermark, sweptAt: Long) {
         this.watermark = watermark
+    }
+
+    // CrmRepository: [crmDirectory] is the "server"; [crmCache] the local cache.
+    val crmDirectory = mutableMapOf<String, CrmMatch>()
+    val crmCache = mutableMapOf<String, CachedCrmLookup>()
+    val crmLookups = mutableListOf<String>()
+    var crmAvailable = true
+    var createLeadResult: ((NewLead, String) -> CreateLeadResult)? = null
+    val createLeadRequests = mutableListOf<Pair<NewLead, String>>()
+
+    override suspend fun cached(normalizedNumber: String): CachedCrmLookup? = crmCache[normalizedNumber]
+
+    override suspend fun lookup(normalizedNumber: String, now: Long): CrmLookupResult {
+        crmLookups += normalizedNumber
+        if (!crmAvailable) return CrmLookupResult.Unavailable
+        val match = crmDirectory[normalizedNumber]
+        crmCache[normalizedNumber] = CachedCrmLookup(match, now)
+        return match?.let { CrmLookupResult.Found(it) } ?: CrmLookupResult.NotFound
+    }
+
+    override suspend fun createLead(lead: NewLead, idempotencyKey: String, now: Long): CreateLeadResult {
+        createLeadRequests += lead to idempotencyKey
+        if (!crmAvailable) return CreateLeadResult.Unavailable
+        val result = createLeadResult?.invoke(lead, idempotencyKey)
+            ?: crmDirectory[lead.phone]?.let { CreateLeadResult.AlreadyExists(it) }
+            ?: CreateLeadResult.Created(CrmMatch(CrmRecordType.LEAD, "lead_${crmDirectory.size + 1}", lead.name, lead.company))
+        when (result) {
+            is CreateLeadResult.Created -> crmDirectory[lead.phone] = result.lead
+            else -> Unit
+        }
+        val stored = crmDirectory[lead.phone]
+        if (stored != null) crmCache[lead.phone] = CachedCrmLookup(stored, now)
+        return result
+    }
+
+    // SettingsRepository
+    private val workSim = MutableStateFlow<Int?>(null)
+    override fun observeWorkSimSlot(): Flow<Int?> = workSim
+    override suspend fun workSimSlot(): Int? = workSim.value
+    override suspend fun setWorkSimSlot(slot: Int?) {
+        workSim.value = slot
     }
 
     // TransactionRunner

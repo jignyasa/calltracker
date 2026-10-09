@@ -5,6 +5,7 @@ import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.ClassificationDecision
+import com.example.calltracker.domain.model.CrmMatch
 import kotlinx.coroutines.flow.Flow
 
 interface CallRepository {
@@ -14,6 +15,8 @@ interface CallRepository {
 
     suspend fun getCall(id: Long): CallRecord?
 
+    suspend fun getCallsForNumber(normalizedNumber: String): List<CallRecord>
+
     /**
      * Stores a CallLog row unless it was imported before.
      * @return the new call id, or null if the row already exists.
@@ -22,10 +25,21 @@ interface CallRepository {
         entry: CallLogEntry,
         normalizedNumber: String?,
         decision: ClassificationDecision,
+        crmMatch: CrmMatch?,
         now: Long,
     ): Long?
 
     suspend fun setClassification(callId: Long, classification: Classification, source: ClassificationSource)
+
+    /** Attaches (or clears) the CRM record on every stored call from [normalizedNumber]. Doesn't classify. */
+    suspend fun setCrmMatch(normalizedNumber: String, match: CrmMatch?)
+
+    /**
+     * Numbers with calls since [since] whose CRM answer is missing or older than [staleBefore], most recent first.
+     * Never includes a number the user marked personal (by rule, or by hand on any of its calls): those are not
+     * sent to the CRM at all.
+     */
+    suspend fun numbersNeedingCrmLookup(since: Long, staleBefore: Long, limit: Int): List<String>
 
     /**
      * Applies a per-number rule to every stored call from [normalizedNumber] that the user hasn't classified by hand.

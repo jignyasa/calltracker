@@ -17,7 +17,8 @@ Default-deny: anything not positively BUSINESS is never synced.
 - [x] Phase 1: Mock CRM server (2026-10-08). 16 `node:test` tests; `scripts/demo.sh` walkthrough
 - [x] Phase 2: Domain + data core (2026-10-09). 33 JVM tests (use cases, rules, normalizer, Room/Robolectric) + on-device encryption test
 - [x] Phase 3: Call detection (2026-10-09). 42 JVM tests; emulator check: missed, incoming, outgoing, and a call after process kill all imported
-- [ ] Phase 4: Matching + classification
+- [x] Phase 4: Matching + classification (2026-10-09). 74 JVM tests; on device (A50): CRM match upgrades a saved contact to BUSINESS, unknown → prompt, Business/Personal/Log actions, offline prompt + retry resolves once the CRM is back
+- [ ] Phase 5: UI
 
 ## Phases
 

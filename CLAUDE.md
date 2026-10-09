@@ -39,7 +39,13 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
    All of them only call `SweepScheduler`. The logic lives in `domain/usecase/SweepCallLogUseCase` (pages of 200, one transaction per page).
 4. First sweep backfills **7 days** (`sweep_state.not_before` keeps that floor for every later sweep). Device contacts (`CACHED_NAME` present)
    are classified PERSONAL unless a rule or CRM match says otherwise.
-5. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.
+5. **CRM matching** never blocks the sweep: the sweep classifies from local signals only (`GatherClassificationSignals`: rule, *cached*
+   CRM answer, work SIM from `SettingsRepository`, device contact). Then `CrmLookupScheduler.resolveAfterSweep` runs `CrmLookupWorker` →
+   `ResolveCrmMatchesUseCase` (numbers from the last 7 days with no/stale cache, 24 h TTL, ≤50 per run) → `ReclassifyNumberUseCase`
+   (skips USER_MANUAL, reconciles the outbox). Only after that does it post the post-call prompt (`PostCallPromptPolicy`: UNCLASSIFIED,
+   ended < 1 h ago, max 3). The post-sweep run has no network constraint so prompts aren't delayed offline; failed lookups go to the
+   network-bound `crm-lookup-retry` work.
+6. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.
    On the emulator: `adb emu gsm call <n>` / `gsm accept <n>` / `gsm cancel <n>`; outgoing calls via `adb shell am start -a android.intent.action.CALL -d tel:<n>`.
 
 ## Privacy (hard rule)
@@ -52,6 +58,9 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
 - Every BUSINESS call gets an activity (with its client UUID) and is queued immediately; notes added later re-arm the same item.
 - A per-number rule never overrides a call the user classified by hand (`ClassificationSource.USER_MANUAL`).
 - Never log raw phone numbers or notes (mask them). `android:allowBackup="false"`; DB excluded from data extraction.
+  The debug HTTP log is BASIC level with `redactQueryParams("phone")`; never raise it to BODY.
+- CRM lookups send only the E.164 number. A number with a PERSONAL rule, or with any call the user marked PERSONAL by hand, is
+  never looked up (`CallDao.numbersNeedingCrmLookup`).
 
 ## Sync (outbox pattern)
 - `outbox` rows (one per activity, keyed by `call_id`): `clientId` (UUID generated once locally, **sent as `Idempotency-Key`**), status
@@ -71,7 +80,8 @@ Phase plan + progress: `docs/PLAN.md`. Don't write code outside the current phas
   `POST /activities/batch` (≤100 items; per-item status CREATED/DUPLICATE/UPDATED/CONFLICT/INVALID/ERROR; `clientId` is the item's idempotency key).
   All times are epoch millis.
 - Faults: `X-Mock-Fault` header or `POST /__admin/faults` (latency, failureRate, itemFailureRate, forceStatus/forceCount).
-- App base URL comes from `BuildConfig.CRM_BASE_URL` (`http://10.0.2.2:3000/` on the emulator; physical device: `adb reverse tcp:3000 tcp:3000` + localhost).
+- App base URL comes from `BuildConfig.CRM_BASE_URL` (`http://10.0.2.2:3000/` on the emulator; physical device: `adb reverse tcp:3000 tcp:3000`
+  and build with `-PcrmBaseUrl=http://localhost:3000/`). Token: `BuildConfig.CRM_API_TOKEN` (`-PcrmApiToken`, default `dev-token`).
 
 ## Conventions
 - Every dependency goes through the version catalog. Check current APIs/versions with Context7 before adding or upgrading one.

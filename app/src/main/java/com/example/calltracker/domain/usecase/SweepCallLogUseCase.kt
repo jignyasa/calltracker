@@ -1,13 +1,12 @@
 package com.example.calltracker.domain.usecase
 
 import com.example.calltracker.domain.model.CallLogEntry
-import com.example.calltracker.domain.model.ClassificationSignals
 import com.example.calltracker.domain.model.SweepWatermark
 import com.example.calltracker.domain.phone.PhoneNumberNormalizer
 import com.example.calltracker.domain.repository.CallLogAccessDeniedException
 import com.example.calltracker.domain.repository.CallLogSource
 import com.example.calltracker.domain.repository.CallRepository
-import com.example.calltracker.domain.repository.NumberRuleRepository
+import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import java.time.Clock
@@ -24,9 +23,10 @@ import javax.inject.Inject
 class SweepCallLogUseCase @Inject constructor(
     private val source: CallLogSource,
     private val calls: CallRepository,
-    private val rules: NumberRuleRepository,
+    private val settings: SettingsRepository,
     private val sweepState: SweepStateRepository,
     private val normalizer: PhoneNumberNormalizer,
+    private val gatherSignals: GatherClassificationSignals,
     private val classify: ClassifyCallUseCase,
     private val syncGate: SyncGate,
     private val transaction: TransactionRunner,
@@ -44,6 +44,7 @@ class SweepCallLogUseCase @Inject constructor(
             SweepWatermark(lastCallLogId = Long.MAX_VALUE, lastStartedAt = floor, notBefore = floor)
         }
         val queryWatermark = watermark
+        val workSimSlot = settings.workSimSlot()
         var cursor = -1L
         var scanned = 0
         val imported = mutableListOf<Long>()
@@ -61,7 +62,7 @@ class SweepCallLogUseCase @Inject constructor(
             transaction.run {
                 val now = clock.millis()
                 for (entry in page) {
-                    val id = ingest(entry, now) ?: continue
+                    val id = ingest(entry, workSimSlot, now) ?: continue
                     syncGate.reconcile(id)
                     imported += id
                 }
@@ -76,13 +77,11 @@ class SweepCallLogUseCase @Inject constructor(
         return Result.Completed(imported, scanned)
     }
 
-    private suspend fun ingest(entry: CallLogEntry, now: Long): Long? {
+    /** Local signals only (CRM cache, no network); [ResolveCrmMatchesUseCase] refines the result afterwards. */
+    private suspend fun ingest(entry: CallLogEntry, workSimSlot: Int?, now: Long): Long? {
         val number = normalizer.normalize(entry.rawNumber)
-        val signals = ClassificationSignals(
-            userRule = number?.let { rules.getRule(it)?.classification },
-            isDeviceContact = !entry.cachedName.isNullOrBlank(),
-        )
-        return calls.insertIfNew(entry, number, classify(signals), now)
+        val signals = gatherSignals(number, entry.simSlot, !entry.cachedName.isNullOrBlank(), workSimSlot)
+        return calls.insertIfNew(entry, number, classify(signals), signals.crmMatch, now)
     }
 
     private fun advance(current: SweepWatermark, page: List<CallLogEntry>): SweepWatermark {

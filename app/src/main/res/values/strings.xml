@@ -23,4 +23,12 @@
     <string name="classification_business">Business</string>
     <string name="classification_personal">Personal</string>
     <string name="classification_unclassified">Unsorted</string>
+
+    <string name="call_subtitle_short">%1$s · %2$s</string>
+    <string name="notification_channel_post_call">After-call questions</string>
+    <string name="notification_channel_post_call_description">Asks whether a call with an unknown number was a work call</string>
+    <string name="post_call_title">Work call?</string>
+    <string name="post_call_text">%1$s · %2$s</string>
+    <string name="post_call_public_text">Was your last call a work call?</string>
+    <string name="post_call_action_log">Log</string>
 </resources>

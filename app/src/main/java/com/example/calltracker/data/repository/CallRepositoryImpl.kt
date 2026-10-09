@@ -8,6 +8,7 @@ import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationDecision
 import com.example.calltracker.domain.model.ClassificationSource
+import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.repository.CallRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -25,10 +26,14 @@ class CallRepositoryImpl @Inject constructor(
 
     override suspend fun getCall(id: Long): CallRecord? = dao.getById(id)?.toDomain()
 
+    override suspend fun getCallsForNumber(normalizedNumber: String): List<CallRecord> =
+        dao.getByNumber(normalizedNumber).map { it.toDomain() }
+
     override suspend fun insertIfNew(
         entry: CallLogEntry,
         normalizedNumber: String?,
         decision: ClassificationDecision,
+        crmMatch: CrmMatch?,
         now: Long,
     ): Long? {
         val id = dao.insertIgnore(
@@ -44,10 +49,10 @@ class CallRepositoryImpl @Inject constructor(
                 simSlot = entry.simSlot,
                 classification = decision.classification,
                 classificationSource = decision.source,
-                crmType = null,
-                crmId = null,
-                crmName = null,
-                crmCompany = null,
+                crmType = crmMatch?.type,
+                crmId = crmMatch?.id,
+                crmName = crmMatch?.name,
+                crmCompany = crmMatch?.company,
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -58,6 +63,13 @@ class CallRepositoryImpl @Inject constructor(
     override suspend fun setClassification(callId: Long, classification: Classification, source: ClassificationSource) {
         dao.updateClassification(callId, classification, source, clock.millis())
     }
+
+    override suspend fun setCrmMatch(normalizedNumber: String, match: CrmMatch?) {
+        dao.setCrmMatch(normalizedNumber, match?.type, match?.id, match?.name, match?.company, clock.millis())
+    }
+
+    override suspend fun numbersNeedingCrmLookup(since: Long, staleBefore: Long, limit: Int): List<String> =
+        dao.numbersNeedingCrmLookup(since, staleBefore, limit)
 
     override suspend fun applyRuleToNumber(normalizedNumber: String, classification: Classification): List<Long> {
         val ids = dao.idsOverridableByRule(normalizedNumber)

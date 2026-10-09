@@ -26,10 +26,7 @@ class CallAdapter(
         fun bind(call: CallRecord) {
             val context = binding.root.context
             binding.root.setOnClickListener { onClick(call) }
-            binding.title.text = call.crmMatch?.name
-                ?: call.deviceContactName
-                ?: call.rawNumber?.takeIf { call.normalizedNumber != null }
-                ?: context.getString(R.string.call_private_number)
+            binding.title.text = Formatters.displayName(context, call)
             binding.typeIcon.setImageResource(
                 when (call.type) {
                     CallType.INCOMING -> android.R.drawable.sym_call_incoming

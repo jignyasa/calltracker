@@ -5,6 +5,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.calltracker.data.local.entity.CallEntity
+import com.example.calltracker.data.local.entity.CrmCacheEntity
+import com.example.calltracker.data.local.entity.NumberRuleEntity
 import com.example.calltracker.data.repository.ActivityRepositoryImpl
 import com.example.calltracker.data.repository.CallRepositoryImpl
 import com.example.calltracker.data.repository.NumberRuleRepositoryImpl
@@ -71,6 +73,29 @@ class DatabaseTest {
             createdAt = 0,
             updatedAt = 0,
         )
+
+    @Test
+    fun numbersNeedingCrmLookupSkipsFreshAnswersAndPersonalNumbers() = runTest {
+        val dao = db.callDao()
+        val base = 1_789_000_000_000L
+        dao.insertIgnore(call(1, "+919000000001"))                    // never looked up → needed
+        dao.insertIgnore(call(2, "+919000000002"))                    // fresh answer → skip
+        dao.insertIgnore(call(3, "+919000000003"))                    // stale answer → needed
+        dao.insertIgnore(call(4, "+919000000004"))                    // personal rule → never
+        dao.insertIgnore(call(5, "+919000000005", Classification.PERSONAL, ClassificationSource.USER_MANUAL))
+        dao.insertIgnore(call(6, "+919000000005"))                    // same number, other call → still never
+        dao.insertIgnore(call(7, null))                               // private → never
+        dao.insertIgnore(call(8, "+919000000001"))                    // duplicate number → listed once
+        db.crmCacheDao().upsert(CrmCacheEntity("+919000000002", null, null, null, null, fetchedAt = base))
+        db.crmCacheDao().upsert(CrmCacheEntity("+919000000003", null, null, null, null, fetchedAt = base - 10))
+        db.numberRuleDao().upsert(NumberRuleEntity("+919000000004", Classification.PERSONAL, 0))
+
+        val numbers = dao.numbersNeedingCrmLookup(since = base, staleBefore = base - 1, limit = 10)
+
+        // Most recent call first: +…01 has call 8.
+        assertEquals(listOf("+919000000001", "+919000000003"), numbers)
+        assertEquals(emptyList<String>(), dao.numbersNeedingCrmLookup(since = base + 100, staleBefore = base - 1, limit = 10))
+    }
 
     @Test
     fun reinsertingTheSameCallLogRowIsIgnored() = runTest {
