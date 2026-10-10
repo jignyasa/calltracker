@@ -153,15 +153,12 @@ is linked), so no duplicate lead is made.
 ## 8. Future improvements
 
 - **Login and token refresh**, per-user CRM accounts, and server-pushed config (CRM URL, cache TTL).
-- **Push-based CRM changes** (FCM or delta sync) instead of a 24 h lookup cache; bulk "is this number known?" lookups.
+- **work with real CRM data
 - **Persist the log-form draft** across process death (today it survives rotation only).
 - **Search** in the call list; per-day summaries for the rep.
 - **Tell the rep when a CRM conflict replaced their edit**, with the overwritten text to copy back.
 - **Review automatically created leads**: a list of them, with the company to fill in and an undo.
 - **Smarter "ask once"**: suggest a per-call answer when a saved-Personal number calls during work hours on the work SIM,
   instead of following the saved answer silently.
-- **Open the database off the main thread** (async DI provider or a startup initializer).
-- **Upload retention**: prune old synced calls and activities after N days to bound storage.
-- **Instrumented UI tests** (Espresso) for the main flows and a CI pipeline running unit tests, lint and a release build.
 - **More OEM coverage** (Tecno, Infinix, Lava) and an in-app "test background reliability" check.
 - **Analytics without personal data** (counts of syncs/failures) to monitor reliability across devices.

@@ -65,9 +65,6 @@ calls and large backlogs, and fault injection on the mock server (`X-Mock-Fault`
 | Release APK | R8 build imported, classified and uploaded a 65-call backlog in 7 s; 10 unknown calls never sent; no app/network logs; paged list under load; Samsung battery prompt and screen |
 | Privacy | the CRM only ever received Business test calls — none of the phone's real calls; DB file has no plaintext |
 
-Full logs of each run: [TEST_REPORT_PHASE3.md](TEST_REPORT_PHASE3.md) and the "Checked" sections of
-[IMPLEMENTATION_NOTES.md](IMPLEMENTATION_NOTES.md). Bugs found on the device were fixed and given a regression test where
-possible.
 
 ## Not covered
 

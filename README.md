@@ -125,4 +125,4 @@ Details, the device test plan and results: [docs/TESTING.md](docs/TESTING.md).
 
 Kotlin · XML layouts + ViewBinding + Material 3 · MVVM + Clean Architecture · Hilt · Coroutines/Flow · Room +
 SQLCipher (Keystore-wrapped key) · Paging 3 · WorkManager · Retrofit + OkHttp + kotlinx.serialization · libphonenumber ·
-JUnit4, MockK/fakes, Turbine, Robolectric, MockWebServer. Why each: [docs/DECISIONS.md](docs/DECISIONS.md).
+ MockWebServer. Why each: [docs/DECISIONS.md](docs/DECISIONS.md).
