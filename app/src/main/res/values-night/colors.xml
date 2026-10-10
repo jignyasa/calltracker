@@ -7,7 +7,6 @@
     <color name="brand_on_primary_container">#FFD6E3FF</color>
     <color name="brand_secondary">#FF8AB4F8</color>
     <color name="appbar">#FF17305E</color>
-    <color name="appbar_accent">#FFFFD54F</color>
 
     <color name="background">#FF111318</color>
     <color name="surface">#FF15181D</color>

@@ -5,7 +5,6 @@ import androidx.paging.testing.asSnapshot
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.SyncStatus
-import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.sync.SweepRequester
 import com.example.calltracker.testing.FakeRepositories
 import com.example.calltracker.testing.MainDispatcherRule
@@ -29,21 +28,14 @@ class CallListViewModelTest {
     private val repos = FakeRepositories()
     private val useCases = TestUseCases(repos, clock)
     private var sweeps = 0
-    private var uploadsNow = 0
     private val sweepRequester = object : SweepRequester {
         override fun requestSweep() {
             sweeps++
         }
     }
-    private val syncRequester = object : SyncRequester {
-        override fun requestSync() = Unit
-        override fun syncNow() {
-            uploadsNow++
-        }
-    }
 
     private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) =
-        CallListViewModel(repos, repos, sweepRequester, syncRequester, saved)
+        CallListViewModel(repos, repos, sweepRequester, saved)
 
     private suspend fun seed() {
         repos.addCall(1, classification = Classification.BUSINESS, source = ClassificationSource.CRM_MATCH)
@@ -66,19 +58,15 @@ class CallListViewModelTest {
     }
 
     @Test
-    fun `classification and sync filters combine`() = runTest {
+    fun `a tab shows its calls, whatever their upload status`() = runTest {
         seed()
         val vm = viewModel()
 
         vm.setClassificationFilter(Classification.BUSINESS)
-        assertEquals(listOf(2L, 1L), vm.calls.asSnapshot().map { it.call.id })
-
-        vm.setSyncFilter(SyncFilter.PENDING)
-        assertEquals(listOf(1L), vm.calls.asSnapshot().map { it.call.id })
-        assertTrue(vm.state.first { it.filter.sync != null }.filter.isActive)
+        assertEquals("pending and synced alike", listOf(2L, 1L), vm.calls.asSnapshot().map { it.call.id })
+        assertTrue(vm.state.first { it.filter.classification != null }.filter.isActive)
 
         vm.setClassificationFilter(null)
-        vm.setSyncFilter(null)
         assertEquals(4, vm.calls.asSnapshot().size)
     }
 
@@ -134,11 +122,8 @@ class CallListViewModelTest {
     }
 
     @Test
-    fun `refresh requests a sweep, upload now skips the debounce`() {
-        val vm = viewModel()
-        vm.refresh()
-        vm.uploadNow()
+    fun `refresh requests a sweep`() {
+        viewModel().refresh()
         assertEquals(1, sweeps)
-        assertEquals(1, uploadsNow)
     }
 }

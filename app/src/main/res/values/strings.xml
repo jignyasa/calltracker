@@ -61,12 +61,8 @@
 
     <!-- Call list -->
     <string name="filter_all">All</string>
-    <string name="filter_any_sync">Any status</string>
-    <string name="filter_sync_pending">Pending</string>
     <string name="filter_sync_synced">Synced</string>
-    <string name="filter_sync_failed">Failed</string>
     <string name="menu_upload_now">Upload now</string>
-    <string name="menu_status_filter">Filter by upload status</string>
     <string name="upload_started">Uploading when online…</string>
     <plurals name="upload_waiting">
         <item quantity="one">%1$d call waiting to upload</item>

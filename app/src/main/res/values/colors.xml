@@ -10,8 +10,6 @@
     <color name="brand_on_primary_container">#FF0B3D91</color>
     <color name="brand_secondary">#FF1659D6</color>
     <color name="appbar">#FF1659D6</color>
-    <!-- Toolbar filter icon while an upload-status filter is on. -->
-    <color name="appbar_accent">#FFFFD54F</color>
 
     <!-- Neutrals -->
     <color name="background">#FFF4F6FA</color>

@@ -90,7 +90,7 @@ only fields the CRM API supports. "Professional" is used in the UI for what the 
 
 | # | Mockup screen | In the app | Differences, and why |
 |---|---|---|---|
-| 1 | Call Activity List | Call activities (`CallListFragment`, `item_call`) | Adds a 4th **Unsorted** tab (calls not decided yet must stay findable). No search icon (no search feature); the filter icon is the upload-status filter. |
+| 1 | Call Activity List | Call activities (`CallListFragment`, `item_call`) | Adds a 4th **Unsorted** tab (calls not decided yet must stay findable). No search icon (no search feature). No filter icon or ⋮ menu: upload status and Upload now live on the Sync queue screen, which the "waiting to upload" banner opens. |
 | 2 | Call Details & Logging | Call details (`CallDetailFragment`) | Adds the Professional / Personal choice and "Always for this number" (the app's classification). Remarks is a plain field. |
 | 3 | Match CRM Record | "Associated with" card on Call details | Matching is automatic (by number, in the background), so there is no manual "Use this lead" step. Without a match, the card offers **Create new lead**. |
 | 4 | Create New Lead | Full-screen form (`CreateLeadDialogFragment`) | Only Name and Company are editable. Phone comes from the call and Source is "Phone call". Email and Notes aren't in the CRM's `POST /leads`. |

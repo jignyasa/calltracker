@@ -454,3 +454,8 @@ The product owner's 8-step flow, implemented (comparison table in
 - **Fixed during the device run:** answering in the app left the number's "Work call?" notification up; any answer now
   dismisses them (`CallPromptDismisser`, implemented by `PostCallNotifier`). The debug seeder no longer crashes the app
   when a reinstall drops its WRITE_CALL_LOG grant.
+- **Home screen toolbar (later the same day):** the ⋮ menu (only "Upload now") and the upload-status filter icon are
+  removed. Both duplicated the Sync queue screen (its Pending / Failed / Synced tabs and upload icon), which the
+  home screen's "waiting to upload" banner and the side menu open. `CallListViewModel` lost its sync filter and
+  `uploadNow()`; the unused menus, filter icon, accent colour and strings went too. 154 tests, lint 0/0; checked on
+  the A50.
