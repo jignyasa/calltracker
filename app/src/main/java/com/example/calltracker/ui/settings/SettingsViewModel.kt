@@ -23,6 +23,7 @@ data class SettingsUiState(
     val sims: List<SimCard> = emptyList(),
     val workSimSlot: Int? = null,
     val updating: Boolean = false,
+    val autoCreateLeads: Boolean = true,
 )
 
 sealed interface SettingsEvent {
@@ -40,8 +41,14 @@ class SettingsViewModel @Inject constructor(
     private val updating = MutableStateFlow(false)
 
     val state: StateFlow<SettingsUiState> =
-        combine(sims, settings.observeWorkSimSlot(), updating) { sims, slot, updating ->
-            SettingsUiState(loading = sims == null, sims = sims.orEmpty(), workSimSlot = slot, updating = updating)
+        combine(sims, settings.observeWorkSimSlot(), updating, settings.observeAutoCreateLeads()) { sims, slot, updating, autoLeads ->
+            SettingsUiState(
+                loading = sims == null,
+                sims = sims.orEmpty(),
+                workSimSlot = slot,
+                updating = updating,
+                autoCreateLeads = autoLeads,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
     private val _events = Channel<SettingsEvent>(Channel.BUFFERED)
@@ -54,6 +61,10 @@ class SettingsViewModel @Inject constructor(
     /** SIMs can be swapped or the phone permission granted while the app is in the background. */
     fun refreshSims() {
         viewModelScope.launch { sims.value = simCards.activeSims() }
+    }
+
+    fun setAutoCreateLeads(enabled: Boolean) {
+        viewModelScope.launch { settings.setAutoCreateLeads(enabled) }
     }
 
     fun selectWorkSim(slot: Int?) {

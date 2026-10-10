@@ -2,19 +2,23 @@ package com.example.calltracker.domain.usecase
 
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.phone.PhoneNumberNormalizer
+import com.example.calltracker.domain.repository.CallPromptDismisser
+import com.example.calltracker.domain.repository.CrmLookupRequester
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import java.time.Clock
 import javax.inject.Inject
 
 /**
- * Adds or changes an "always business / always personal" rule and applies it to the number's calls
- * (except calls classified by hand), queueing or dequeueing them in the same transaction.
+ * Adds or changes a number's saved classification (rule) and applies it to the number's calls (except calls
+ * classified by hand), queueing or dequeueing them in the same transaction. A professional rule asks for a CRM lookup.
  */
 class SetNumberRuleUseCase @Inject constructor(
     private val rules: NumberRuleRepository,
     private val normalizer: PhoneNumberNormalizer,
     private val reclassifyNumber: ReclassifyNumberUseCase,
+    private val crmLookups: CrmLookupRequester,
+    private val prompts: CallPromptDismisser,
     private val transaction: TransactionRunner,
     private val clock: Clock,
 ) {
@@ -27,14 +31,17 @@ class SetNumberRuleUseCase @Inject constructor(
     suspend operator fun invoke(number: String, classification: Classification): Result {
         require(classification != Classification.UNCLASSIFIED) { "Rules are BUSINESS or PERSONAL" }
         val normalized = normalizer.normalize(number) ?: return Result.InvalidNumber
-        return transaction.run {
+        val reclassified = transaction.run {
             rules.setRule(normalized, classification, clock.millis())
-            Result.Saved(normalized, reclassifyNumber(normalized).size)
+            reclassifyNumber(normalized)
         }
+        prompts.dismiss(reclassified)
+        if (classification == Classification.BUSINESS) crmLookups.requestLookup()
+        return Result.Saved(normalized, reclassified.size)
     }
 }
 
-/** Removes a rule; the number's calls fall back to the automatic signals (CRM, work SIM, contact). */
+/** Removes a rule; the number's calls fall back to the work SIM, or to Unsorted (asked again). */
 class DeleteNumberRuleUseCase @Inject constructor(
     private val rules: NumberRuleRepository,
     private val reclassifyNumber: ReclassifyNumberUseCase,

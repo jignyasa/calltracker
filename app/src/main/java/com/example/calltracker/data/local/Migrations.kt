@@ -16,4 +16,26 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2)
+/**
+ * v3, data only: classification no longer comes from a CRM match or a saved phone contact; the number's saved answer
+ * (a rule) decides. Calls those signals decided are kept as they are by turning them into saved answers: BUSINESS for
+ * numbers found in the CRM (inserted first, so it wins), PERSONAL for saved contacts. A rule the user set is kept.
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        for ((source, classification) in listOf("CRM_MATCH" to "BUSINESS", "DEVICE_CONTACT" to "PERSONAL")) {
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO number_rules (normalized_number, classification, created_at)
+                SELECT normalized_number, '$classification', MAX(updated_at) FROM calls
+                WHERE classification_source = '$source' AND classification = '$classification'
+                  AND normalized_number IS NOT NULL
+                GROUP BY normalized_number
+                """.trimIndent(),
+            )
+        }
+        db.execSQL("UPDATE calls SET classification_source = 'USER_RULE' WHERE classification_source IN ('CRM_MATCH', 'DEVICE_CONTACT')")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

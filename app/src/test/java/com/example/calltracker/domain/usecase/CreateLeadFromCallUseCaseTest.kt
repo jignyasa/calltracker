@@ -40,6 +40,8 @@ class CreateLeadFromCallUseCaseTest {
             assertTrue(id in repos.outbox)
         }
         assertEquals("Vikram Rao", repos.getCall(1)!!.crmMatch?.name)
+        assertEquals("saved: the number's next calls are professional without asking",
+            Classification.BUSINESS, repos.getRule("+919876543210")?.classification)
     }
 
     @Test

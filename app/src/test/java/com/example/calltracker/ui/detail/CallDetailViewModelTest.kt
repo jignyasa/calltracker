@@ -11,6 +11,7 @@ import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
 import com.example.calltracker.testing.FakeRepositories
 import com.example.calltracker.testing.MainDispatcherRule
 import com.example.calltracker.testing.TestUseCases
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -191,5 +192,16 @@ class CallDetailViewModelTest {
             assertEquals(CallDetailEvent.LeadUnavailable, awaitItem())
         }
         assertEquals(Classification.UNCLASSIFIED, vm.state.value.call?.classification)
+    }
+
+    @Test
+    fun `a personal call isn't offered create lead - it would upload the call`() = runTest {
+        repos.addCall(1, classification = Classification.PERSONAL, source = ClassificationSource.DEVICE_CONTACT)
+        val vm = viewModel()
+
+        assertFalse(vm.state.value.canCreateLead)
+
+        vm.classify(Classification.BUSINESS, applyToNumber = false)
+        assertTrue("offered again once marked professional", vm.state.first { it.call?.classification == Classification.BUSINESS }.canCreateLead)
     }
 }

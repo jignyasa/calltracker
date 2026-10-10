@@ -54,6 +54,23 @@ class SettingsRepositoryImpl @Inject constructor(
         prefs.edit { putBoolean(KEY_BATTERY_HINT_DISMISSED, true) }
     }
 
+    override fun observeAutoCreateLeads(): Flow<Boolean> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == KEY_AUTO_CREATE_LEADS) trySend(readAutoCreateLeads())
+        }
+        trySend(readAutoCreateLeads())
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.flowOn(io)
+
+    override suspend fun autoCreateLeads(): Boolean = withContext(io) { readAutoCreateLeads() }
+
+    override suspend fun setAutoCreateLeads(enabled: Boolean) = withContext(io) {
+        prefs.edit { putBoolean(KEY_AUTO_CREATE_LEADS, enabled) }
+    }
+
+    private fun readAutoCreateLeads(): Boolean = prefs.getBoolean(KEY_AUTO_CREATE_LEADS, true)
+
     private fun readWorkSimSlot(): Int? =
         if (prefs.contains(KEY_WORK_SIM_SLOT)) prefs.getInt(KEY_WORK_SIM_SLOT, 0) else null
 
@@ -61,5 +78,6 @@ class SettingsRepositoryImpl @Inject constructor(
         const val PREFS = "settings"
         const val KEY_WORK_SIM_SLOT = "work_sim_slot"
         const val KEY_BATTERY_HINT_DISMISSED = "battery_hint_dismissed"
+        const val KEY_AUTO_CREATE_LEADS = "auto_create_leads"
     }
 }

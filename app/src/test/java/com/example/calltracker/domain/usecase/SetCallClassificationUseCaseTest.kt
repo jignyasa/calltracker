@@ -18,7 +18,7 @@ class SetCallClassificationUseCaseTest {
     private val repos = FakeRepositories()
     private val clock = Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC)
     private val gate = SyncGate(repos, repos, repos, clock)
-    private val setClassification = SetCallClassificationUseCase(repos, repos, repos, gate, repos, clock)
+    private val setClassification = SetCallClassificationUseCase(repos, repos, repos, gate, repos, repos, repos, clock)
 
     @Test
     fun `marking business queues only that call when not applied to the number`() = runTest {
@@ -95,5 +95,40 @@ class SetCallClassificationUseCaseTest {
     fun `user cannot choose UNCLASSIFIED`() = runTest {
         repos.addCall(1)
         setClassification(1, Classification.UNCLASSIFIED, applyToNumber = false)
+    }
+
+    @Test
+    fun `an answer saved for the number means its next call is decided without asking`() = runTest {
+        repos.addCall(1)
+        setClassification(1, Classification.PERSONAL, applyToNumber = true)
+
+        // The next call from the number, through the same rule engine the sweep uses.
+        val next = repos.addCall(2)
+        val decision = ClassifyCallUseCase()(GatherClassificationSignals(repos, repos)(next.normalizedNumber, null, null))
+
+        assertEquals(Classification.PERSONAL, decision.classification)
+        assertEquals(ClassificationSource.USER_RULE, decision.source)
+    }
+
+    @Test
+    fun `a professional answer asks for a CRM lookup, a personal one never does`() = runTest {
+        repos.addCall(1, number = "+919000000001")
+        repos.addCall(2, number = "+919000000002")
+
+        setClassification(2, Classification.PERSONAL, applyToNumber = true)
+        assertEquals(0, repos.crmLookupRequests)
+
+        setClassification(1, Classification.BUSINESS, applyToNumber = true)
+        assertEquals(1, repos.crmLookupRequests)
+    }
+
+    @Test
+    fun `an answer given in the app dismisses the number's open Work call prompts`() = runTest {
+        repos.addCall(1)
+        repos.addCall(2) // same number, also prompted
+
+        setClassification(1, Classification.PERSONAL, applyToNumber = true)
+
+        assertEquals(setOf(1L, 2L), repos.dismissedPrompts)
     }
 }

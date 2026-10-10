@@ -24,15 +24,16 @@ class TestUseCases(val repos: FakeRepositories, val clock: Clock) {
     val gatherSignals = GatherClassificationSignals(repos, repos)
     val reclassifier = CallReclassifier(repos, gatherSignals, ClassifyCallUseCase(), syncGate)
     val reclassifyNumber = ReclassifyNumberUseCase(repos, repos, repos, reclassifier, repos, syncGate, repos, clock)
-    val resolveCrm = ResolveCrmMatchesUseCase(repos, repos, reclassifyNumber, clock)
-    val createLead = CreateLeadFromCallUseCase(repos, repos, reclassifyNumber, syncGate, repos, clock)
-    val setClassification = SetCallClassificationUseCase(repos, repos, repos, syncGate, repos, clock)
+    val createLead = CreateLeadFromCallUseCase(repos, repos, repos, reclassifyNumber, syncGate, repos, clock)
+    val resolveCrm = ResolveCrmMatchesUseCase(repos, repos, reclassifyNumber, createLead, repos, clock)
+
+    val setClassification = SetCallClassificationUseCase(repos, repos, repos, syncGate, repos, repos, repos, clock)
     val saveLog = SaveActivityLogUseCase(repos, repos, syncGate, repos, clock)
-    val setRule = SetNumberRuleUseCase(repos, LibPhoneNumberNormalizer(), reclassifyNumber, repos, clock)
+    val setRule = SetNumberRuleUseCase(repos, LibPhoneNumberNormalizer(), reclassifyNumber, repos, repos, repos, clock)
     val deleteRule = DeleteNumberRuleUseCase(repos, reclassifyNumber, repos)
-    val setWorkSim = SetWorkSimUseCase(repos, repos, reclassifier, repos, clock)
+    val setWorkSim = SetWorkSimUseCase(repos, repos, reclassifier, repos, repos, clock)
     val retryUpload = RetryUploadUseCase(syncGate, repos)
 
     fun upload(uploader: ActivityUploader) =
-        UploadPendingActivitiesUseCase(repos, repos, repos, uploader, repos, reclassifyNumber, syncGate, repos, clock)
+        UploadPendingActivitiesUseCase(repos, repos, repos, uploader, repos, repos, reclassifyNumber, syncGate, repos, clock)
 }

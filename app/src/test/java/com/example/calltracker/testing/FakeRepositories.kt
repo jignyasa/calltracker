@@ -1,42 +1,44 @@
 package com.example.calltracker.testing
 
-import com.example.calltracker.domain.model.Activity
-import com.example.calltracker.domain.model.ActivityLog
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.testing.asPagingSourceFactory
-import kotlinx.coroutines.flow.flatMapLatest
+import com.example.calltracker.domain.model.Activity
+import com.example.calltracker.domain.model.ActivityLog
+import com.example.calltracker.domain.model.CachedCrmLookup
 import com.example.calltracker.domain.model.CallListEntry
 import com.example.calltracker.domain.model.CallListQuery
-import com.example.calltracker.domain.model.UploadCounts
 import com.example.calltracker.domain.model.CallLogEntry
 import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.CallType
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationDecision
 import com.example.calltracker.domain.model.ClassificationSource
-import com.example.calltracker.domain.model.CachedCrmLookup
 import com.example.calltracker.domain.model.CreateLeadResult
 import com.example.calltracker.domain.model.CrmLookupResult
 import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.NewLead
 import com.example.calltracker.domain.model.NumberRule
+import com.example.calltracker.domain.model.OutboxItem
 import com.example.calltracker.domain.model.SweepWatermark
 import com.example.calltracker.domain.model.SyncStatus
+import com.example.calltracker.domain.model.UploadCounts
 import com.example.calltracker.domain.repository.ActivityRepository
+import com.example.calltracker.domain.repository.CallPromptDismisser
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.CrmLookupRequester
 import com.example.calltracker.domain.repository.CrmRepository
-import com.example.calltracker.domain.repository.SettingsRepository
-import com.example.calltracker.domain.repository.SyncRequester
-import com.example.calltracker.domain.model.OutboxItem
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
+import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.SweepStateRepository
+import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.domain.repository.TransactionRunner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import java.util.UUID
 
@@ -50,6 +52,8 @@ class FakeRepositories :
     CrmRepository,
     SettingsRepository,
     SyncRequester,
+    CrmLookupRequester,
+    CallPromptDismisser,
     TransactionRunner {
 
     data class OutboxRow(
@@ -60,6 +64,21 @@ class FakeRepositories :
         val lastError: String? = null,
         val enqueueOrder: Long = 0,
     )
+
+    /** Calls whose "Work call?" prompt was dismissed (the real one cancels notifications). */
+    val dismissedPrompts = mutableSetOf<Long>()
+
+    override fun dismiss(callIds: Set<Long>) {
+        dismissedPrompts += callIds
+    }
+
+    /** Every requestLookup() call (the real one schedules CrmLookupWorker). */
+    var crmLookupRequests = 0
+        private set
+
+    override fun requestLookup() {
+        crmLookupRequests++
+    }
 
     /** Every requestSync()/syncNow() call (the real one schedules SyncWorker). */
     var syncRequests = 0
@@ -183,7 +202,7 @@ class FakeRepositories :
             .mapNotNull { it.normalizedNumber }.toSet()
         val personalRules = rules.value.values.filter { it.classification == Classification.PERSONAL }.map { it.normalizedNumber }
         return calls.value.values
-            .filter { it.normalizedNumber != null && it.startedAt >= since }
+            .filter { it.normalizedNumber != null && it.classification == Classification.BUSINESS && it.startedAt >= since }
             .groupBy { it.normalizedNumber!! }
             .filter { (number, list) ->
                 val cached = crmCache[number]
@@ -362,6 +381,13 @@ class FakeRepositories :
     override suspend fun workSimSlot(): Int? = workSim.value
     override suspend fun setWorkSimSlot(slot: Int?) {
         workSim.value = slot
+    }
+
+    val autoCreateLeadsFlag = MutableStateFlow(true)
+    override fun observeAutoCreateLeads(): Flow<Boolean> = autoCreateLeadsFlag
+    override suspend fun autoCreateLeads(): Boolean = autoCreateLeadsFlag.value
+    override suspend fun setAutoCreateLeads(enabled: Boolean) {
+        autoCreateLeadsFlag.value = enabled
     }
 
     private val batteryHintDismissed = MutableStateFlow(false)

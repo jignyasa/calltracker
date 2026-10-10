@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Shapes -->
+    <style name="ShapeAppearance.CallTracker.Field" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="ShapeAppearance.CallTracker.Button" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10dp</item>
+    </style>
+
+    <!-- Buttons: slightly rounded rectangles, as in the design. -->
+    <style name="Widget.CallTracker.Button" parent="Widget.Material3.Button">
+        <item name="shapeAppearance">@style/ShapeAppearance.CallTracker.Button</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.CallTracker.Button</item>
+    </style>
+
+    <style name="Widget.CallTracker.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.CallTracker.Button</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="strokeColor">@color/brand_primary</item>
+        <item name="android:textAppearance">@style/TextAppearance.CallTracker.Button</item>
+    </style>
+
+    <style name="TextAppearance.CallTracker.Button" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Cards: white, hairline border, 12dp corners. -->
+    <style name="Widget.CallTracker.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="strokeColor">?attr/colorOutlineVariant</item>
+        <item name="cardCornerRadius">12dp</item>
+    </style>
+
+    <!-- Segmented tabs on the call list (All / Professional / Personal / Unsorted). -->
+    <style name="Widget.CallTracker.Segment" parent="Widget.Material3.Button.TextButton">
+        <item name="android:minHeight">40dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.CallTracker.Segment</item>
+        <item name="android:textColor">@color/segment_text</item>
+        <item name="backgroundTint">@color/segment_background</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Full</item>
+        <item name="rippleColor">@color/segment_ripple</item>
+    </style>
+
+    <style name="TextAppearance.CallTracker.Segment" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <!-- Small coloured labels: call type, classification, sync status. Colours are set in code. -->
+    <style name="Widget.CallTracker.Pill" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_pill</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+        <item name="android:drawablePadding">4dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textAppearance">@style/TextAppearance.CallTracker.Pill</item>
+    </style>
+
+    <style name="TextAppearance.CallTracker.Pill" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Labels above form fields ("Call Notes", "Call Outcome", …). -->
+    <style name="TextAppearance.CallTracker.FieldLabel" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- Grey band above a group of settings rows ("Call logging", "Privacy"). -->
+    <style name="Widget.CallTracker.SectionHeader" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">?attr/colorSurfaceContainer</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">8dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.LabelLarge</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Initials in the round avatars. -->
+    <style name="TextAppearance.CallTracker.Avatar" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

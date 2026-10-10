@@ -68,9 +68,12 @@ flowchart TD
 1. **Detection.** Every trigger only *schedules* a sweep; the sweep reads the **CallLog**, which is the source of truth
    (it has the real type, duration and SIM; the `PHONE_STATE` broadcast doesn't). A watermark (`_ID` + date, plus a fixed
    7-day floor) makes sweeps incremental, idempotent and crash-safe.
-2. **Classification** happens in two steps so the sweep never waits for the network: first from local signals (rule,
-   *cached* CRM answer, work SIM, saved contact), then — after a CRM lookup — again for numbers whose answer changed.
-3. **Prompt** only for calls the rules couldn't decide, only after the lookup, only recent, at most three at a time.
+2. **Classification first, from local signals only:** the number's saved answer (every user answer is saved as a number
+   rule), else the work SIM, else Unsorted. The CRM doesn't decide.
+3. **Prompt** only for numbers with no saved answer, only conversations, only recent, at most three showing at a time.
+   The answer is saved for the number.
+3b. **CRM, for professional calls only:** a lookup links the call to the Lead/Contact; not found → the lead is created
+   from the phonebook name (setting, default on) or Create lead is offered. Personal/unsorted numbers are never sent.
 4. **Outbox.** A BUSINESS call gets an activity (with a client UUID) and an outbox row; edits re-arm the row with a new
    `generation`.
 5. **Upload.** Batches go to `POST /activities/batch`; each item's result is applied on its own, only if its generation
@@ -131,6 +134,11 @@ database is opened. Schema history: `app/schemas/`; migrations in `data/local/Mi
 
 ## Screens
 
-Single activity (`MainActivity` implements `AppNavigator`) with plain fragment transactions — five screens didn't
-justify a navigation library. Call list (paged from Room, filters in SQL) → call detail (classify, log form, create
-lead, upload status) · Number rules · Settings (work SIM, notifications, battery/OEM guidance, privacy).
+Single activity (`MainActivity` implements `AppNavigator`) with plain fragment transactions; a handful of screens didn't
+justify a navigation library. A side menu (on the list only) opens: Call activities (paged from Room, filters in SQL)
+→ call detail (classify, CRM record, log form, create lead, upload status) · Sync queue (Pending / Failed / Synced, offline
+banner) · Number rules · Settings (work SIM, notifications, battery/OEM guidance, privacy) · Why this approach?
+Dialogs that return data are `DialogFragment`s with the Fragment Result API: Classify call (opened from a "Work call?"
+notification), Create new lead and Call saved (full screen, `ui/common/FullScreenDialogFragment`).
+Look and feel: blue app bar, colour tokens in `values/colors.xml` + `values-night/colors.xml`, shared avatars and
+pills in `ui/common/CallVisuals`. The UI says **Professional** for `Classification.BUSINESS`; code and the CRM keep BUSINESS.

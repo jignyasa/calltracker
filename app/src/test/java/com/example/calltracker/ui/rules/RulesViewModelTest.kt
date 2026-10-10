@@ -65,7 +65,7 @@ class RulesViewModelTest {
     }
 
     @Test
-    fun `deleting a rule hands the calls back to the automatic signals`() = runTest {
+    fun `deleting a saved answer makes the number's calls unsorted again`() = runTest {
         repos.addCall(1, deviceContactName = "Mom")
         useCases.setRule("+919876543210", Classification.BUSINESS)
 
@@ -74,7 +74,8 @@ class RulesViewModelTest {
             assertEquals(RulesEvent.Deleted(updatedCalls = 1), awaitItem())
         }
         assertNull(repos.getRule("+919876543210"))
-        assertEquals(ClassificationSource.DEVICE_CONTACT, repos.getCall(1)!!.classificationSource)
+        assertEquals(Classification.UNCLASSIFIED, repos.getCall(1)!!.classification)
+        assertEquals(ClassificationSource.NONE, repos.getCall(1)!!.classificationSource)
         assertFalse(1L in repos.outbox)
     }
 }

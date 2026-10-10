@@ -1,21 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <!-- Colours come from values/colors.xml and values-night/colors.xml, so one theme serves light and dark. -->
     <style name="Base.Theme.CallTracker" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/brand_primary</item>
-        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnPrimary">@color/brand_on_primary</item>
+        <item name="colorPrimaryContainer">@color/brand_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/brand_on_primary_container</item>
         <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSecondaryContainer">@color/brand_primary_container</item>
+        <item name="colorOnSecondaryContainer">@color/brand_on_primary_container</item>
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline_variant</item>
+        <item name="colorSurfaceContainerLowest">@color/surface_container_lowest</item>
+        <item name="colorSurfaceContainerLow">@color/surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/surface_container_highest</item>
+
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.CallTracker.Field</item>
+        <item name="materialButtonStyle">@style/Widget.CallTracker.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.CallTracker.Button.Outlined</item>
+        <item name="materialCardViewStyle">@style/Widget.CallTracker.Card</item>
+        <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.OutlinedBox</item>
     </style>
 
     <style name="Theme.CallTracker" parent="Base.Theme.CallTracker" />
 
+    <!-- Full-screen dialogs (Create lead, Call saved): an opaque window with its own toolbar. -->
+    <style name="Theme.CallTracker.FullScreenDialog" parent="Base.Theme.CallTracker">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowAnimationStyle">@style/Animation.CallTracker.FullScreenDialog</item>
+    </style>
+
+    <style name="Animation.CallTracker.FullScreenDialog" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/slide_in</item>
+        <item name="android:windowExitAnimation">@anim/slide_out</item>
+    </style>
+
     <!-- Post-call pop-up: a dialog over whatever app is open, wide enough to type in comfortably. -->
     <style name="Theme.CallTracker.PostCall" parent="Theme.Material3.DayNight.Dialog">
         <item name="colorPrimary">@color/brand_primary</item>
-        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnPrimary">@color/brand_on_primary</item>
+        <item name="colorPrimaryContainer">@color/brand_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/brand_on_primary_container</item>
         <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorSurfaceContainerHigh">@color/surface</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.CallTracker.Field</item>
+        <item name="materialButtonStyle">@style/Widget.CallTracker.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.CallTracker.Button.Outlined</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowMinWidthMajor">90%</item>
         <item name="android:windowMinWidthMinor">90%</item>
+    </style>
+
+    <!-- White title, icons and overflow on the blue app bar. -->
+    <style name="ThemeOverlay.CallTracker.AppBar" parent="ThemeOverlay.Material3.Dark.ActionBar">
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorControlNormal">@color/white</item>
+        <item name="colorOnSurfaceVariant">@color/white</item>
     </style>
 </resources>

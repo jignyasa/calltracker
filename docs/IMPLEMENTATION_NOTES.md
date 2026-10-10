@@ -372,3 +372,85 @@ A check against the spec's "search the number when a call completes, link it, or
 - **On the A50:** a fake call-log row from an unknown number was marked Business. Its note uploaded with no
   lead (version 2). After **Create lead**, the same activity (same `clientId`, note kept) became version 3 with
   `leadId = lead_00004`. Still one activity for the number, and the number appeared in no app log line.
+
+---
+
+## Look and feel redesign (2026-10-10)
+After the user's 10-screen mockup (comparison table: [FLOW_REVIEW.md](FLOW_REVIEW.md#design-mockup-vs-the-app)).
+- **Theme:** blue app bar drawn behind the status bar, with light status icons. Colour tokens are in
+  `values/colors.xml` and `values-night/colors.xml` (one DayNight theme). There are styles for 10dp buttons, 8dp fields,
+  12dp cards, segmented tabs and pills. Lift-on-scroll is off so the bar stays blue.
+- **Shared visuals:** `ui/common/CallVisuals` has initials avatars (person icon for numbers and private calls), call
+  type, classification and sync pills, and the "Lead · Company" line. `Formatters.dayTime` gives "Today, 10:24".
+- **Navigation:** a side menu (on the list only) opens Sync queue, Number rules, Settings and Why this approach?.
+  `AppNavigator` gained `openSyncQueue`, `openAbout` and `showCallList`, plus `openCallDetail(id, askClassification)`.
+- **New screens:** `ClassifyCallDialogFragment` (a "Work call?" notification tap now opens the call with this dialog,
+  via `MainActivity.ACTION_CLASSIFY_CALL`); `CallSavedDialogFragment` after Save, replacing the snackbar;
+  `SyncQueueFragment` + `SyncQueueViewModel`; `AboutFragment`. Create lead is now full screen. Both full-screen
+  dialogs extend `ui/common/FullScreenDialogFragment`, which handles the edge-to-edge insets itself.
+- **Wording:** the UI says "Professional" for `Classification.BUSINESS`. Code, the outbox and the CRM keep BUSINESS.
+- **Not built:** mockup screens 3 (manual match) and 7 (lead detail), and the extra settings toggles and lead fields.
+  They need CRM API changes.
+- **Checked:** 144 JVM tests (5 new in `SyncQueueViewModelTest`), lint 0/0 (one file-scoped exception in
+  `app/lint.xml` for the drawer header). On the A50, light and dark: list, side menu, details, classify (selection
+  updated the CRM), save → saved screen → "View in activities", create lead (empty-name error; the lead created in the
+  CRM and the call relinked), sync queue tabs, settings, about.
+
+---
+
+## Assignment §2 and §3 follow-up (2026-10-10)
+A review of spec §2 (CRM matching) and §3 (professional vs personal) against the app. The full table is in
+[FLOW_REVIEW.md](FLOW_REVIEW.md#assignment-2-and-3-review-2026-10-10).
+- **F1, prompt cap:** `CrmLookupWorker.promptForUndecided` now keeps at most `MAX_PROMPTS` (3) "Work call?" prompts
+  *showing*, across runs; the newest calls keep theirs and an older prompt is cancelled. Prompts carry an extra so
+  `PostCallNotifier.shownPromptCallIds` can tell them apart from "Add notes" notifications, which share the tag.
+- **F2, re-link:** `UploadPendingActivitiesUseCase.healStaleCrmLink` ends with `CrmLookupRequester.requestLookup()`
+  (implemented by `CrmLookupScheduler`, the network-bound run), so a record that moved to a new id re-links at once.
+- **Professional → log form:** the notification's Professional button is now an activity intent to `PostCallActivity`
+  (Android 12+ won't start an activity from a receiver that a notification button triggered). The form cancels the
+  notification, marks the call professional, and waits for that before showing. In the Classify dialog, the call's
+  screen scrolls to the log form.
+- **Create lead in the after-call form**, for unknown numbers, reusing `CreateLeadDialogFragment` and the shared
+  `CallDetailViewModel`.
+- **No Create lead on Personal calls** (`CallDetailUiState.canCreateLead`): it would mark the call professional and
+  upload it. The CRM card says why instead.
+- **No prompt for missed/rejected calls** (`PostCallPromptPolicy`): nothing to log; they wait under Unsorted.
+- **Docs:** DECISIONS.md §1 rewritten ("Professional", every way to classify, why the CRM is searched first).
+  Debug seeder: `bulk --es type incoming`.
+- **Checked:** 149 JVM tests (5 new), lint 0/0. On the A50: F1 (6 unknown incoming calls over 3 sweeps → 2, 3, 3
+  prompts showing); F2 (lead moved to a new id → lookup 0.3 s after the heal, 11 activities re-sent with the new lead
+  30 s later, the note kept); a Personal call shows no Create lead.
+
+---
+
+## Product owner's call flow: classify first (2026-10-10)
+The product owner's 8-step flow, implemented (comparison table in
+[FLOW_REVIEW.md](FLOW_REVIEW.md#call-flow-from-the-product-owner-2026-10-10-implemented)).
+- **Classification first** (`ClassifyCallUseCase`): the number's saved answer (rule) → work SIM → Unsorted. The CRM match
+  and saved phone contacts no longer decide (`ClassificationSignals.isDeviceContact` removed; `crmMatch` only links).
+- **Asked once per number:** every answer is saved as a rule. The notification's Personal (`PostCallActionReceiver`) and
+  Professional (`PostCallActivity`) buttons and Log (`MainViewModel`) pass `applyToNumber = true`; the Classify dialog and
+  the call screen tick "Remember for this number". Create lead saves a BUSINESS rule. The Rules screen ("Saved for this
+  number") lists them all.
+- **CRM only for professional calls:** `CallDao.numbersNeedingCrmLookup` adds `classification = 'BUSINESS'`. A BUSINESS
+  answer (call, rule, work SIM) calls `CrmLookupRequester.requestLookup()` so the link comes at once.
+- **Auto-create the lead** (`ResolveCrmMatchesUseCase`): on "not found", if `SettingsRepository.autoCreateLeads()` (new
+  switch under Settings → CRM, default on) and a BUSINESS call of the number has a phonebook name →
+  `CreateLeadFromCallUseCase` with that name. Offline → the "not found" is forgotten so the next run retries. The worker
+  logs counts only ("created N leads").
+- **DB v3** (`MIGRATION_2_3`, data only, schema `3.json`): numbers the CRM made BUSINESS or a saved contact made PERSONAL
+  become saved answers (a user's own rule wins), and those calls' source becomes `USER_RULE`, so nothing flips on
+  upgrade. `MigrationTest.migrate2To3…` covers it.
+- **Debug seeder:** `bulk --es type incoming --es name N`.
+- **Checked:** 153 JVM tests (updated for the new order, plus new ones: an answer is remembered; a BUSINESS answer
+  requests a lookup; unsorted/saved-contact numbers are never looked up; auto-lead with/without name, switch, offline
+  retry; the settings switch; an answer in the app dismisses the number's open prompts). 154 JVM tests, lint 0/0.
+- **On the A50:** installed over the v2 build, classifications kept ("Saved for this number"). (1) Unknown number →
+  asked → Personal → its next call Personal without asking, 0 CRM lookups. (2) A CRM lead's number → asked once, 0
+  lookups before the answer → Professional → looked up at once, linked to `lead_00005`, uploaded with it; next call
+  professional without asking, linked, uploaded. (3) A phonebook contact "Anita Desai" not in the CRM → asked →
+  Professional → lead `lead_00006` "Anita Desai" created automatically, call uploaded linked; its prompt disappeared.
+  `connectedDebugAndroidTest`: 3/3, including `migrate2To3…`.
+- **Fixed during the device run:** answering in the app left the number's "Work call?" notification up; any answer now
+  dismisses them (`CallPromptDismisser`, implemented by `PostCallNotifier`). The debug seeder no longer crashes the app
+  when a reinstall drops its WRITE_CALL_LOG grant.

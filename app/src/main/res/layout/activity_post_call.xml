@@ -28,6 +28,37 @@
             android:textAppearance="?attr/textAppearanceBodyMedium"
             tools:text="Demo Pvt Ltd · Outgoing · 2m 10s" />
 
+        <!-- Unknown number: create the lead right here, straight after the call. -->
+        <LinearLayout
+            android:id="@+id/leadRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_pill"
+            android:backgroundTint="?attr/colorPrimaryContainer"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/popup_not_in_crm"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnPrimaryContainer" />
+
+            <Button
+                android:id="@+id/createLeadButton"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/popup_create_lead" />
+        </LinearLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/notesLayout"
             android:layout_width="match_parent"
@@ -69,7 +100,7 @@
             android:layout_marginTop="8dp"
             android:hint="@string/detail_follow_up"
             app:endIconContentDescription="@string/detail_follow_up_clear"
-            app:endIconDrawable="@android:drawable/ic_menu_close_clear_cancel"
+            app:endIconDrawable="@drawable/ic_close"
             app:endIconMode="custom">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -110,9 +141,10 @@
 
             <Button
                 android:id="@+id/saveButton"
-                style="?attr/buttonBarButtonStyle"
+                style="?attr/materialButtonStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="@string/detail_save" />
         </LinearLayout>
     </LinearLayout>

@@ -19,9 +19,9 @@ networks, across reboots and on aggressive OEM battery managers. **Personal call
 | | |
 |---|---|
 | **Call detection** | Incoming, outgoing, missed, rejected (plus blocked/voicemail/other). Number, type, start, end, duration, SIM slot. Picked up seconds after the call ends, and caught up after the app was killed, force-stopped or the phone rebooted. |
-| **CRM matching** | Each completed call's number is looked up in the CRM (answers cached for 24 h between calls); a match links the call to the Lead/Contact, including calls already uploaded. No match → **Create lead** from the call. |
-| **Business vs personal** | Decided automatically whenever there is a signal: your rule for the number → CRM match → work SIM → saved phone contact. Only calls with no signal ask *"Work call?"* in a notification right after the call (Business / Personal / Log). |
-| **Post-call log** | Notes, outcome, follow-up date, next action, remarks — for business calls. |
+| **Professional vs personal** | Classified first: the number's saved answer, else the work SIM, else *"Work call?"* in a notification right after the call (Professional / Personal / Log). Every answer is saved, so a number is asked **once**. |
+| **CRM matching** | Professional calls only: the number is looked up in Leads and Contacts (answers cached for 24 h between calls); a match links the call, including calls already uploaded. No match → the lead is created automatically from the phonebook name (Settings, on by default), or **Create lead** is offered. Personal numbers never reach the CRM. |
+| **Post-call log** | Notes, outcome, follow-up date, next action, remarks — for professional calls. |
 | **Offline & sync** | Everything is stored first (encrypted) on the phone; business calls go to an outbox that uploads in batches with idempotency keys, per-item results, retries with backoff, conflict handling, and crash recovery. |
 | **Real-world hardening** | Dual SIM, low-end phones (paged lists, bounded work), OEM battery guidance (Xiaomi, Oppo, Realme, Vivo, Samsung, Huawei), encrypted database, no call data in logs. |
 

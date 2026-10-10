@@ -1,6 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Light palette. Every name here is redefined in values-night/colors.xml. -->
 <resources>
-    <color name="brand_primary">#FF1E5AA8</color>
-    <color name="brand_secondary">#FF00897B</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand: the blue app bar and primary buttons. -->
+    <color name="brand_primary">#FF1659D6</color>
+    <color name="brand_on_primary">#FFFFFFFF</color>
+    <color name="brand_primary_container">#FFE3EDFD</color>
+    <color name="brand_on_primary_container">#FF0B3D91</color>
+    <color name="brand_secondary">#FF1659D6</color>
+    <color name="appbar">#FF1659D6</color>
+    <!-- Toolbar filter icon while an upload-status filter is on. -->
+    <color name="appbar_accent">#FFFFD54F</color>
+
+    <!-- Neutrals -->
+    <color name="background">#FFF4F6FA</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="on_surface">#FF1A1C20</color>
+    <color name="surface_variant">#FFE7EBF2</color>
+    <color name="on_surface_variant">#FF5B6474</color>
+    <color name="outline">#FFC4CAD4</color>
+    <color name="outline_variant">#FFE1E5EC</color>
+    <color name="surface_container_lowest">#FFFFFFFF</color>
+    <color name="surface_container_low">#FFF7F9FC</color>
+    <color name="surface_container">#FFF1F4F9</color>
+    <color name="surface_container_high">#FFEBEFF5</color>
+    <color name="surface_container_highest">#FFE5E9F0</color>
+
+    <!-- Pills: classification -->
+    <color name="pill_professional_bg">#FFE3EDFD</color>
+    <color name="pill_professional_fg">#FF1659D6</color>
+    <color name="pill_personal_bg">#FFFDE8EC</color>
+    <color name="pill_personal_fg">#FFD6304F</color>
+    <color name="pill_unsorted_bg">#FFFFF1DC</color>
+    <color name="pill_unsorted_fg">#FFAD5A00</color>
+
+    <!-- Pills: call type and sync state -->
+    <color name="pill_ok_bg">#FFE6F4EA</color>
+    <color name="pill_ok_fg">#FF1E8E3E</color>
+    <color name="pill_bad_bg">#FFFCE8E6</color>
+    <color name="pill_bad_fg">#FFD93025</color>
+    <color name="pill_neutral_bg">#FFEEF0F3</color>
+    <color name="pill_neutral_fg">#FF5F6368</color>
+    <color name="pill_pending_bg">#FFFFF1DC</color>
+    <color name="pill_pending_fg">#FFAD5A00</color>
+
+    <!-- Initials avatars -->
+    <color name="avatar_1">#FF5B7CFA</color>
+    <color name="avatar_2">#FF8E6CEF</color>
+    <color name="avatar_3">#FF20A39E</color>
+    <color name="avatar_4">#FFF08A24</color>
+    <color name="avatar_5">#FFE5527A</color>
+    <color name="avatar_6">#FF3A9BDC</color>
+    <color name="avatar_unknown">#FFB3BAC5</color>
+
+    <!-- "Why this approach?" icon circles -->
+    <color name="feature_blue_bg">#FFE3EDFD</color>
+    <color name="feature_green_bg">#FFE6F4EA</color>
+    <color name="feature_purple_bg">#FFF0EAFD</color>
+    <color name="feature_orange_bg">#FFFFF1DC</color>
+    <color name="feature_teal_bg">#FFE0F4F2</color>
+    <color name="feature_purple_fg">#FF7B4FE0</color>
+    <color name="feature_orange_fg">#FFE07B00</color>
+    <color name="feature_teal_fg">#FF00897B</color>
 </resources>

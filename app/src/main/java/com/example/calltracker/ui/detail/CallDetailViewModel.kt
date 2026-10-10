@@ -42,7 +42,9 @@ data class CallDetailUiState(
 ) {
     val canLog: Boolean get() = call?.classification == Classification.BUSINESS
     val dirty: Boolean get() = canLog && draft != (activity?.log ?: ActivityLog())
-    val canCreateLead: Boolean get() = call?.normalizedNumber != null && call.crmMatch == null
+    /** Not on a personal call: creating a lead marks the call professional and uploads it. */
+    val canCreateLead: Boolean get() =
+        call?.normalizedNumber != null && call.crmMatch == null && call.classification != Classification.PERSONAL
     val canRetryUpload: Boolean get() = canLog && activity?.syncStatus == SyncStatus.FAILED_PERMANENT
 }
 

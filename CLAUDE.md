@@ -24,6 +24,9 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
     Dialogs that return data are `DialogFragment`s + Fragment Result API (survive rotation). Forms keep their draft in the
     ViewModel and refill fields only when `formVersion` changes, so the user's typing is never overwritten.
     ViewModels depend on interfaces (e.g. `SweepRequester`, `SimCardSource`), never on Android classes, so they test on the JVM.
+    Look and feel follows `docs/images/design-mockup.png`: colours only as tokens in `values/` + `values-night/colors.xml`,
+    avatars/pills via `ui/common/CallVisuals`, full-screen dialogs extend `ui/common/FullScreenDialogFragment`.
+    UI text says "Professional" for `Classification.BUSINESS` (code, outbox and CRM keep BUSINESS).
   - `domain/`: pure Kotlin. Models, repository **interfaces**, use cases. No `android.*` imports.
   - `data/`: Room DB, DAOs, entities, Retrofit APIs, DTOs, mappers, repository implementations, CallLog reader.
   - `sync/`: WorkManager workers + scheduling · `telephony/`: receivers + call detection · `di/`: Hilt modules.
@@ -46,22 +49,28 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
    Runs on `BOOT_COMPLETED`/`MY_PACKAGE_REPLACED`, app open, PHONE_STATE idle, a WorkManager **content-URI trigger on
    `CallLog.Calls.CONTENT_URI`** (`CallLogChangedWorker`, re-armed by every sweep), and an hourly unique periodic worker.
    All of them only call `SweepScheduler`. The logic lives in `domain/usecase/SweepCallLogUseCase` (pages of 200, one transaction per page).
-4. First sweep backfills **7 days** (`sweep_state.not_before` keeps that floor for every later sweep). Device contacts (`CACHED_NAME` present)
-   are classified PERSONAL unless a rule or CRM match says otherwise.
-5. **CRM matching** never blocks the sweep: the sweep classifies from local signals only (`GatherClassificationSignals`: rule, *cached*
-   CRM answer, work SIM from `SettingsRepository`, device contact). Then `CrmLookupScheduler.resolveAfterSweep` runs `CrmLookupWorker` →
-   `ResolveCrmMatchesUseCase` (numbers from the last 7 days with no/stale cache, 24 h TTL, or a cached answer older than one of
-   the number's calls ended, so every completed call is searched once; ≤50 per run) → `ReclassifyNumberUseCase`
+4. First sweep backfills **7 days** (`sweep_state.not_before` keeps that floor for every later sweep). Saved phone contacts
+   (`CACHED_NAME`) are **not** auto-Personal: like any number with no saved answer, they're asked once.
+5. **Classify first, CRM only for professional calls** (the product owner's call flow; see `docs/FLOW_REVIEW.md`). The sweep
+   classifies from local signals (`GatherClassificationSignals`: the number's saved answer = rule, work SIM; the *cached* CRM record
+   only links). Every user answer is saved as a number rule (`applyToNumber = true` everywhere; "Remember for this number" ticked),
+   so a number is asked once. Then `CrmLookupScheduler.resolveAfterSweep` runs `CrmLookupWorker` →
+   `ResolveCrmMatchesUseCase` (**BUSINESS** numbers from the last 7 days with no/stale cache, 24 h TTL, or a cached answer older than
+   one of the number's calls ended; ≤50 per run; a BUSINESS answer also calls `CrmLookupRequester` at once). Not found → auto-create
+   the lead from the phonebook name if `SettingsRepository.autoCreateLeads()` (default on), else Create lead is offered → `ReclassifyNumberUseCase`
    (skips USER_MANUAL, reconciles the outbox; a BUSINESS call whose CRM link (type + id) changed is re-sent with a bumped
    `updatedAt`, so links found or created after upload reach the CRM). Only after that does it post the post-call prompt (`PostCallPromptPolicy`: UNCLASSIFIED,
-   ended < 1 h ago, max 3). The post-sweep run has no network constraint so prompts aren't delayed offline; failed lookups go to the
+   incoming/outgoing only (no prompt for missed/rejected), ended < 1 h ago, never more than 3 *showing*: the newest calls keep
+   theirs, counted with `PostCallNotifier.shownPromptCallIds`). The prompt's Professional button opens `PostCallActivity`
+   (it marks the call, then shows the log form with Create lead for unknown numbers). The post-sweep run has no network constraint so prompts aren't delayed offline; failed lookups go to the
    network-bound `crm-lookup-retry` work.
 6. A freshly installed app gets no broadcasts until it's opened once (Android "stopped state"). When testing on a device, launch it first.
    On the emulator: `adb emu gsm call <n>` / `gsm accept <n>` / `gsm cancel <n>`; outgoing calls via `adb shell am start -a android.intent.action.CALL -d tel:<n>`.
 
 ## Privacy (hard rule)
 - Every call is classified `BUSINESS`, `PERSONAL`, or `UNCLASSIFIED`.
-  Precedence: user per-number rule → CRM match (BUSINESS) → work-SIM setting → device contact not in CRM (PERSONAL) → UNCLASSIFIED (ask via post-call notification).
+  Precedence: the number's saved answer (rule) → work-SIM setting (BUSINESS) → UNCLASSIFIED (ask once via post-call notification;
+  the answer is saved). The CRM never decides classification. Personal and unsorted numbers are never sent to the CRM, not even as a lookup.
 - **Only `BUSINESS` calls may ever be inserted into the sync outbox.** `domain/usecase/SyncGate.reconcile()` is the *only* caller of
   `OutboxRepository.enqueue`. Anything that changes a call's classification or activity must call `reconcile` inside the same
   `TransactionRunner.run {}` block. PERSONAL/UNCLASSIFIED data never goes into any network DTO, log line, or analytics.
@@ -70,8 +79,9 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
 - A per-number rule never overrides a call the user classified by hand (`ClassificationSource.USER_MANUAL`).
 - Never log raw phone numbers or notes (mask them). `android:allowBackup="false"`; DB excluded from data extraction.
   The debug HTTP log is BASIC level with `redactQueryParams("phone")`; never raise it to BODY.
-- CRM lookups send only the E.164 number. A number with a PERSONAL rule, or with any call the user marked PERSONAL by hand, is
-  never looked up (`CallDao.numbersNeedingCrmLookup`).
+- CRM lookups send only the E.164 number, and only for numbers with a BUSINESS call. A number with a PERSONAL rule, or with any
+  call the user marked PERSONAL by hand, is never looked up (`CallDao.numbersNeedingCrmLookup`). Auto-create lead sends the phonebook
+  name, only for a professional number that isn't in the CRM, and only with the setting on.
 
 ## Sync (outbox pattern)
 - `outbox` rows (one per activity, keyed by `call_id`): `clientId` (UUID generated once locally, **sent as `Idempotency-Key`**), status
@@ -88,7 +98,7 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
   contract fields). `OutboxRepositoryImpl.enqueue` calls `SyncRequester.requestSync()` (5 s debounce so the enqueuing transaction
   commits first; `APPEND_OR_REPLACE`, `CONNECTED`, exponential backoff); hourly periodic + a run on every app start.
 - Stale CRM link (INVALID "leadId/contactId does not exist") is healed, not failed: forget cache → reclassify number → re-queue if
-  still BUSINESS. A log save is stamped `max(now, previous updatedAt + 1)` so a CRM copy with a skewed-ahead clock can't swallow edits.
+  still BUSINESS → request a CRM lookup at once (`CrmLookupRequester`), so a record under a new id re-links. A log save is stamped `max(now, previous updatedAt + 1)` so a CRM copy with a skewed-ahead clock can't swallow edits.
 - Unsupported call types are mapped for the CRM: BLOCKED→REJECTED, VOICEMAIL→MISSED, OTHER→INCOMING. A BUSINESS call without a
   number fails locally (FAILED_PERMANENT) and is never sent.
 

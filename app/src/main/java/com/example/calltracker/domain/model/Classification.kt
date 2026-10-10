@@ -11,10 +11,14 @@ enum class ClassificationSource {
     /** The user picked it for this specific call. Never overridden automatically. */
     USER_MANUAL,
 
-    /** A per-number "always business/personal" rule. */
+    /** The number's saved classification (a per-number rule; every answer the user gives is saved as one). */
     USER_RULE,
+
+    /** No longer produced: the CRM doesn't decide classification. Old rows are turned into rules by MIGRATION_2_3. */
     CRM_MATCH,
     WORK_SIM,
+
+    /** No longer produced: saved phone contacts are asked once. Old rows are turned into rules by MIGRATION_2_3. */
     DEVICE_CONTACT,
     NONE,
 }
@@ -23,11 +27,10 @@ enum class ClassificationSource {
 data class ClassificationSignals(
     /** The user's per-number rule, if any. */
     val userRule: Classification? = null,
+    /** The cached CRM record for the number: links the call, never decides its classification. */
     val crmMatch: CrmMatch? = null,
     /** The call used the SIM the user marked as their work SIM. */
     val isOnWorkSim: Boolean = false,
-    /** The number is saved in the phone's own contacts. */
-    val isDeviceContact: Boolean = false,
 )
 
 data class ClassificationDecision(

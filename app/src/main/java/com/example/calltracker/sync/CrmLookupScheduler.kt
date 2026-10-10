@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.calltracker.domain.repository.CrmLookupRequester
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -16,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class CrmLookupScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : CrmLookupRequester {
     private val workManager get() = WorkManager.getInstance(context)
 
     /**
@@ -51,6 +52,9 @@ class CrmLookupScheduler @Inject constructor(
             .build()
         workManager.enqueueUniqueWork(RETRY, ExistingWorkPolicy.REPLACE, request)
     }
+
+    /** A lookup outside a sweep (e.g. a CRM link just went stale): the network-bound run, which needs no call ids. */
+    override fun requestLookup() = scheduleRetry()
 
     companion object {
         const val TAG = "crm-lookup"

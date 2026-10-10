@@ -17,7 +17,8 @@ import kotlin.concurrent.thread
  * adb shell pm grant com.example.calltracker android.permission.WRITE_CALL_LOG
  * adb shell am broadcast -n com.example.calltracker/.debug.CallLogSeedReceiver --es seed types
  *
- * Actions: types, old, contact, late, bulk (`--ei count N --ei base B`, or `--es number N` for one number),
+ * Actions: types, old, contact, late, bulk (`--ei count N --ei base B`, or `--es number N` for one number;
+ * `--es type incoming` for answered calls instead of missed ones, `--es name N` for a saved contact),
  * count (`--ei base B`), cleanup. Every fake number starts with [FAKE_PREFIX].
  */
 class CallLogSeedReceiver : BroadcastReceiver() {
@@ -28,6 +29,9 @@ class CallLogSeedReceiver : BroadcastReceiver() {
         thread(name = TAG) {
             try {
                 seed(context, intent)
+            } catch (_: SecurityException) {
+                // A reinstall can drop the grant; crashing here would kill the app under test.
+                Log.w(TAG, "WRITE_CALL_LOG not granted: adb shell pm grant com.example.calltracker android.permission.WRITE_CALL_LOG")
             } finally {
                 pending.finish()
             }
@@ -72,9 +76,17 @@ class CallLogSeedReceiver : BroadcastReceiver() {
                 val base = intent.getIntExtra("base", 5000)
                 // `--es number +9190000NNNNN`: every row from that one number (e.g. a CRM lead with a big backlog).
                 val oneNumber = intent.getStringExtra("number")?.takeIf { it.startsWith(FAKE_PREFIX) }
+                // `--es type incoming`: answered 30 s calls (these get a "Work call?" prompt; missed calls don't).
+                val incoming = intent.getStringExtra("type") == "incoming"
+                // `--es name N`: as if the number were saved in the phonebook (the dialer's CACHED_NAME).
+                val name = intent.getStringExtra("name")
                 repeat(count) { i ->
                     val number = oneNumber ?: "$FAKE_PREFIX${(base + i).toString().padStart(5, '0')}"
-                    add(number, CallLog.Calls.MISSED_TYPE, now - (count - i) * 1_000L)
+                    if (incoming) {
+                        add(number, CallLog.Calls.INCOMING_TYPE, now - (count - i) * 60_000L, duration = 30, name = name)
+                    } else {
+                        add(number, CallLog.Calls.MISSED_TYPE, now - (count - i) * 1_000L)
+                    }
                 }
             }
             "count" -> {

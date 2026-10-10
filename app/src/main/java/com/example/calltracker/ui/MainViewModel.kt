@@ -15,9 +15,9 @@ class MainViewModel @Inject constructor(
     private val notifier: PostCallNotifier,
 ) : ViewModel() {
 
-    /** "Log" on the post-call notification: logging details means it's a work call. The form arrives in Phase 5. */
+    /** "Log" on a post-call notification: logging details means it's a work call, saved for the number. */
     fun onLogCallRequested(callId: Long) {
         notifier.cancel(callId)
-        viewModelScope.launch { setClassification(callId, Classification.BUSINESS, applyToNumber = false) }
+        viewModelScope.launch { setClassification(callId, Classification.BUSINESS, applyToNumber = true) }
     }
 }

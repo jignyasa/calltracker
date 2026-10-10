@@ -21,6 +21,13 @@ class PostCallPromptPolicyTest {
     }
 
     @Test
+    fun `an incoming conversation is prompted, a missed or rejected call is not`() {
+        assertTrue(PostCallPromptPolicy.shouldPrompt(call.copy(type = CallType.INCOMING), justEnded))
+        assertFalse("nothing to log; it waits under Unsorted", PostCallPromptPolicy.shouldPrompt(call.copy(type = CallType.MISSED), justEnded))
+        assertFalse(PostCallPromptPolicy.shouldPrompt(call.copy(type = CallType.REJECTED), justEnded))
+    }
+
+    @Test
     fun `decided, old or blocked calls are not`() {
         val business = call.copy(classification = Classification.BUSINESS, classificationSource = ClassificationSource.CRM_MATCH)
         assertFalse(PostCallPromptPolicy.shouldPrompt(business, justEnded))

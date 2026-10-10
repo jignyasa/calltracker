@@ -13,6 +13,7 @@ import com.example.calltracker.domain.model.UploadResult
 import com.example.calltracker.domain.repository.ActivityRepository
 import com.example.calltracker.domain.repository.ActivityUploader
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.CrmLookupRequester
 import com.example.calltracker.domain.repository.CrmRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.TransactionRunner
@@ -30,6 +31,7 @@ class UploadPendingActivitiesUseCase @Inject constructor(
     private val activities: ActivityRepository,
     private val uploader: ActivityUploader,
     private val crm: CrmRepository,
+    private val crmLookups: CrmLookupRequester,
     private val reclassifyNumber: ReclassifyNumberUseCase,
     private val syncGate: SyncGate,
     private val transaction: TransactionRunner,
@@ -170,13 +172,15 @@ class UploadPendingActivitiesUseCase @Inject constructor(
      * The CRM rejected only because the lead/contact this call is linked to no longer exists (deleted or merged on
      * the CRM side). Retrying unchanged would fail forever, so: forget the cached answer, drop the link and re-run
      * the rule engine for the number (a call that was BUSINESS only because of that CRM record drops out of the
-     * outbox here and is never sent), then re-queue this call if it is still BUSINESS. The next CRM lookup re-links
-     * the number if the record exists under a new id.
+     * outbox here and is never sent), then re-queue this call if it is still BUSINESS. A CRM lookup is requested right
+     * away, so a record that now exists under a new id (merged, or moved from contact to lead) re-links the number
+     * and re-sends its calls without waiting for the next call or the hourly sweep.
      */
     private suspend fun healStaleCrmLink(item: OutboxItem, phone: String) {
         crm.forget(phone)
         reclassifyNumber(phone)
         syncGate.reconcile(item.callId, contentChanged = true)
+        crmLookups.requestLookup()
     }
 
     /** The mock CRM's wording (mock-server/README.md): "leadId does not exist" / "contactId does not exist". */

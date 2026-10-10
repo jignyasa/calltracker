@@ -8,11 +8,13 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/permissionCard"
-        style="?attr/materialCardViewFilledStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
         android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
+        app:strokeWidth="0dp"
         tools:visibility="visible">
 
         <LinearLayout
@@ -25,14 +27,16 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/permission_title"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:textAppearance="?attr/textAppearanceTitleMedium"
+                android:textColor="?attr/colorOnPrimaryContainer" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:text="@string/permission_rationale"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnPrimaryContainer" />
 
             <Button
                 android:id="@+id/grantButton"
@@ -46,11 +50,10 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/batteryCard"
-        style="?attr/materialCardViewOutlinedStyle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginTop="12dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -63,23 +66,28 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:drawablePadding="8dp"
+                android:gravity="center_vertical"
                 android:text="@string/battery_hint_title"
-                android:textAppearance="?attr/textAppearanceTitleSmall" />
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                app:drawableStartCompat="@drawable/ic_battery"
+                app:drawableTint="@color/pill_pending_fg" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/battery_hint_text"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
+                style="?attr/buttonBarStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal"
-                style="?attr/buttonBarStyle">
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/batteryDismiss"
@@ -99,66 +107,80 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <HorizontalScrollView
+    <!-- Segmented tabs: All / Professional / Personal / Unsorted. -->
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/classificationTabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:scrollbars="none">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_segments"
+        android:padding="4dp"
+        android:spacing="2dp"
+        app:checkedButton="@id/tabAll"
+        app:innerCornerSize="20dp"
+        app:selectionRequired="true"
+        app:singleSelection="true">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/classificationChips"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/tabAll"
+            style="@style/Widget.CallTracker.Segment"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            app:checkedChip="@id/chipAll"
-            app:selectionRequired="true"
-            app:singleLine="true"
-            app:singleSelection="true">
+            android:layout_weight="0.7"
+            android:text="@string/filter_all" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipAll"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/filter_all" />
+        <Button
+            android:id="@+id/tabBusiness"
+            style="@style/Widget.CallTracker.Segment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:text="@string/classification_business" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipBusiness"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/classification_business" />
+        <Button
+            android:id="@+id/tabPersonal"
+            style="@style/Widget.CallTracker.Segment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/classification_personal" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipPersonal"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/classification_personal" />
+        <Button
+            android:id="@+id/tabUnclassified"
+            style="@style/Widget.CallTracker.Segment"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/classification_unclassified" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipUnclassified"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/classification_unclassified" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
+    <!-- "3 calls waiting to upload · 1 failed": opens the sync queue. -->
     <TextView
         android:id="@+id/uploadSummary"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="?attr/colorPrimaryContainer"
+        android:drawablePadding="8dp"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="4dp"
-        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:paddingVertical="8dp"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/colorOnPrimaryContainer"
         android:visibility="gone"
-        tools:text="3 waiting to upload · 1 failed"
+        app:drawableEndCompat="@drawable/ic_chevron_right"
+        app:drawableStartCompat="@drawable/ic_cloud_upload"
+        app:drawableTint="?attr/colorOnPrimaryContainer"
+        tools:text="3 calls waiting to upload · 1 failed"
         tools:visibility="visible" />
 
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:background="?attr/colorSurface">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/list"
@@ -174,10 +196,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:drawablePadding="12dp"
             android:gravity="center"
             android:padding="24dp"
             android:text="@string/empty_calls"
             android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:visibility="gone" />
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:visibility="gone"
+            app:drawableTopCompat="@drawable/ic_phone"
+            app:drawableTint="?attr/colorOutline" />
     </FrameLayout>
 </LinearLayout>

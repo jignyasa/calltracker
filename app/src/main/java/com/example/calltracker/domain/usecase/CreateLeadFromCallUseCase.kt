@@ -7,6 +7,7 @@ import com.example.calltracker.domain.model.CrmMatch
 import com.example.calltracker.domain.model.NewLead
 import com.example.calltracker.domain.repository.CallRepository
 import com.example.calltracker.domain.repository.CrmRepository
+import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.TransactionRunner
 import java.time.Clock
 import java.util.UUID
@@ -20,6 +21,7 @@ import javax.inject.Inject
 class CreateLeadFromCallUseCase @Inject constructor(
     private val calls: CallRepository,
     private val crm: CrmRepository,
+    private val rules: NumberRuleRepository,
     private val reclassify: ReclassifyNumberUseCase,
     private val syncGate: SyncGate,
     private val transaction: TransactionRunner,
@@ -55,6 +57,8 @@ class CreateLeadFromCallUseCase @Inject constructor(
         }
 
         transaction.run {
+            // A lead means this number is work: saved, so its other and future calls are professional without asking.
+            rules.setRule(number, Classification.BUSINESS, clock.millis())
             reclassify(number)
             val current = calls.getCall(callId)
             if (current != null && current.classification != Classification.BUSINESS) {

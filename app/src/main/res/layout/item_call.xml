@@ -1,72 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One call on the list: avatar | name, who, type pill + time | sync icon, duration, classification pill. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:foreground="?attr/selectableItemBackground"
-    android:gravity="center_vertical"
-    android:minHeight="72dp"
-    android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp">
-
-    <!-- contentDescription is the call type, set in CallAdapter. -->
-    <ImageView
-        android:id="@+id/typeIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        tools:ignore="ContentDescription"
-        tools:src="@android:drawable/sym_call_incoming" />
+    android:orientation="vertical">
 
     <LinearLayout
-        android:layout_width="0dp"
+        android:id="@+id/row"
+        android:baselineAligned="false"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:foreground="?attr/selectableItemBackground"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
 
-        <TextView
-            android:id="@+id/title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
-            tools:text="Ananya Sharma" />
+        <include
+            android:id="@+id/avatar"
+            layout="@layout/view_avatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp" />
 
-        <TextView
-            android:id="@+id/subtitle"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textAppearance="?attr/textAppearanceBodySmall"
-            tools:text="Outgoing · 5 min ago · 1m 20s" />
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textStyle="bold"
+                tools:text="Rahul Patel" />
+
+            <TextView
+                android:id="@+id/who"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Lead · ABC Traders" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/typePill"
+                    style="@style/Widget.CallTracker.Pill"
+                    tools:backgroundTint="@color/pill_ok_bg"
+                    tools:text="Outgoing"
+                    tools:textColor="@color/pill_ok_fg" />
+
+                <TextView
+                    android:id="@+id/time"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="Today, 10:24 AM" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="8dp"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/syncIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:visibility="invisible"
+                tools:ignore="ContentDescription"
+                tools:src="@drawable/ic_check_circle"
+                tools:tint="@color/pill_ok_fg"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="4m 32s" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/classification"
+                style="@style/Widget.CallTracker.Pill"
+                tools:backgroundTint="@color/pill_professional_bg"
+                tools:text="Professional"
+                tools:textColor="@color/pill_professional_fg" />
+        </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="wrap_content"
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:gravity="center_horizontal"
-        android:orientation="vertical">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/classification"
-            style="@style/Widget.Material3.Chip.Assist"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:clickable="false"
-            android:focusable="false"
-            tools:text="Business" />
-
-        <TextView
-            android:id="@+id/syncBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceLabelSmall"
-            android:visibility="gone"
-            tools:text="Pending"
-            tools:visibility="visible" />
-    </LinearLayout>
+        android:layout_marginStart="68dp"
+        app:dividerColor="?attr/colorOutlineVariant" />
 </LinearLayout>

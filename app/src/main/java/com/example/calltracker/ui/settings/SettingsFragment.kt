@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentSettingsBinding
 import com.example.calltracker.ui.common.BackgroundRestrictions
+import com.example.calltracker.ui.navigator
 import com.example.calltracker.ui.postcall.PostCallLauncher
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -45,6 +46,11 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
         binding.popupButton.setOnClickListener { open(PostCallLauncher.overlaySettingsIntent(requireContext())) }
         binding.batteryButton.setOnClickListener { BackgroundRestrictions.requestIgnoreBatteryOptimizations(requireContext()) }
+        binding.rulesRow.setOnClickListener { navigator.openRules() }
+        binding.autoLeadSwitch.setOnCheckedChangeListener { _, checked ->
+            if (!rendering) viewModel.setAutoCreateLeads(checked)
+        }
+        binding.aboutRow.setOnClickListener { navigator.openAbout() }
         BackgroundRestrictions.oemGuide?.let { guide ->
             val brand = getString(guide.brand)
             binding.oemSection.isVisible = true
@@ -120,6 +126,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                     button.isEnabled = !state.updating
                 }
             binding.noSims.isVisible = !state.loading && state.sims.isEmpty()
+            binding.autoLeadSwitch.isChecked = state.autoCreateLeads
         } finally {
             rendering = false
         }

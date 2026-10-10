@@ -7,16 +7,18 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Whether to ask "work or personal?" after a call. Only for calls the rule engine couldn't decide, that just ended
- * (not the backfill or an old catch-up), and that are real conversations or attempts.
+ * (not the backfill or an old catch-up), and that were conversations: a missed or rejected call from an unknown
+ * number has nothing to log, so it waits under Unsorted instead of interrupting (a customer's missed call is still
+ * matched in the CRM and logged without asking).
  */
 object PostCallPromptPolicy {
 
     val PROMPT_WINDOW_MS = TimeUnit.HOURS.toMillis(1)
 
-    /** Never more than this many prompts at once (e.g. after the phone was off); the rest wait in the app. */
+    /** Never more than this many prompts showing at once (e.g. after the phone was off); the rest wait in the app. */
     const val MAX_PROMPTS = 3
 
-    private val promptableTypes = setOf(CallType.INCOMING, CallType.OUTGOING, CallType.MISSED, CallType.REJECTED)
+    private val promptableTypes = setOf(CallType.INCOMING, CallType.OUTGOING)
 
     fun shouldPrompt(call: CallRecord, now: Long): Boolean =
         call.classification == Classification.UNCLASSIFIED &&

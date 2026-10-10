@@ -76,24 +76,33 @@ class CrmLookupWorkerTest {
 
     private fun posted() = context.getSystemService(NotificationManager::class.java).activeNotifications.map { it.id.toLong() }
 
+    /** A call the number's saved answer made professional. */
+    private suspend fun professionalCall(id: Long, number: String, startedAt: Long) {
+        repos.setRule(number, Classification.BUSINESS, now)
+        repos.addCall(id, number = number, startedAt = startedAt,
+            classification = Classification.BUSINESS, source = ClassificationSource.USER_RULE)
+    }
+
     @Test
-    fun `prompts only for calls still undecided after the CRM lookup`() = runTest {
+    fun `asks about every call with no saved answer, a CRM customer's too - classification comes first`() = runTest {
         repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_1", "Vikram", null)
-        repos.addCall(1, number = "+919000000001", startedAt = justNow) // CRM → BUSINESS, no prompt
-        repos.addCall(2, number = "+919000000002", startedAt = justNow) // unknown → prompt
+        repos.addCall(1, number = "+919000000001", startedAt = justNow) // in the CRM, but not answered yet → asked
+        professionalCall(2, "+919000000002", justNow)                    // saved answer → not asked
         repos.addCall(3, number = "+919000000003", startedAt = now - TimeUnit.HOURS.toMillis(5)) // too old
 
         val result = worker(prompt = true, callIds = longArrayOf(1, 2, 3)).doWork()
 
         assertEquals(ListenableWorker.Result.success(), result)
-        assertEquals(Classification.BUSINESS, repos.getCall(1)!!.classification)
-        assertEquals(listOf(2L), posted())
+        assertEquals(Classification.UNCLASSIFIED, repos.getCall(1)!!.classification)
+        assertEquals(listOf(1L), posted())
+        assertEquals("only the professional number is looked up", listOf("+919000000002"), repos.crmLookups)
     }
 
     @Test
     fun `offline still prompts, then hands lookups to the network-bound retry work`() = runTest {
         repos.crmAvailable = false
         repos.addCall(1, startedAt = justNow)
+        professionalCall(2, "+919000000002", justNow - 1) // needs a lookup
 
         val result = worker(prompt = true, callIds = longArrayOf(1)).doWork()
 
@@ -107,6 +116,7 @@ class CrmLookupWorkerTest {
     fun `the retry work backs off while offline and never prompts`() = runTest {
         repos.crmAvailable = false
         repos.addCall(1, startedAt = justNow)
+        professionalCall(2, "+919000000002", justNow - 1) // needs a lookup
 
         assertEquals(ListenableWorker.Result.retry(), worker(prompt = false, callIds = longArrayOf(1)).doWork())
         assertEquals(ListenableWorker.Result.success(), worker(prompt = true, callIds = longArrayOf(1), attempt = 1).doWork())
@@ -114,26 +124,28 @@ class CrmLookupWorkerTest {
     }
 
     @Test
-    fun `a call the CRM resolves later loses its prompt`() = runTest {
+    fun `the CRM never decides an unsorted call - its prompt stays and the number isn't sent`() = runTest {
         repos.addCall(1, startedAt = justNow)
         notifier.show(repos.getCall(1)!!)
         repos.crmDirectory["+919876543210"] = CrmMatch(CrmRecordType.CONTACT, "con_1", "Ananya", null)
 
         worker(prompt = false, callIds = longArrayOf()).doWork()
 
-        assertTrue(posted().isEmpty())
-        assertEquals("…and, now business, gets the log form", listOf(1L), offered)
+        assertEquals(listOf(1L), posted())
+        assertTrue(offered.isEmpty())
+        assertTrue(repos.crmLookups.isEmpty())
     }
 
     @Test
-    fun `a business call that just ended gets the log form, not the question`() = runTest {
+    fun `a professional call that just ended gets the log form, linked, not the question`() = runTest {
         repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_1", "Test Customer", "Demo Pvt Ltd")
-        repos.addCall(1, number = "+919000000001", startedAt = justNow)
+        professionalCall(1, "+919000000001", justNow)
 
         worker(prompt = true, callIds = longArrayOf(1)).doWork()
 
         assertEquals(listOf(1L), offered)
-        assertTrue("no Work call? question for a CRM customer", posted().isEmpty())
+        assertEquals("lead_1", repos.getCall(1)!!.crmMatch?.id)
+        assertTrue("no Work call? question for a number with a saved answer", posted().isEmpty())
     }
 
     @Test
@@ -157,10 +169,32 @@ class CrmLookupWorkerTest {
     @Test
     fun `a retried run never offers again`() = runTest {
         repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_1", "Test Customer", null)
-        repos.addCall(1, number = "+919000000001", startedAt = justNow)
+        professionalCall(1, "+919000000001", justNow)
 
         worker(prompt = true, callIds = longArrayOf(1), attempt = 1).doWork()
 
         assertTrue(offered.isEmpty())
+    }
+
+    @Test
+    fun `never more than three prompts showing across runs - the newest calls keep theirs`() = runTest {
+        (1L..5L).forEach { id -> repos.addCall(id, number = "+91900000000$id", startedAt = justNow + id) }
+
+        worker(prompt = true, callIds = longArrayOf(1, 2)).doWork()
+        worker(prompt = true, callIds = longArrayOf(3, 4)).doWork()
+        worker(prompt = true, callIds = longArrayOf(5)).doWork()
+
+        assertEquals(listOf(3L, 4L, 5L), posted().sorted())
+    }
+
+    @Test
+    fun `an Add notes notification doesn't count as a prompt`() = runTest {
+        repos.addCall(1, number = "+919000000001", classification = Classification.BUSINESS, startedAt = justNow)
+        notifier.showLogPrompt(repos.getCall(1)!!)
+        (2L..4L).forEach { id -> repos.addCall(id, number = "+91900000000$id", startedAt = justNow + id) }
+
+        worker(prompt = true, callIds = longArrayOf(2, 3, 4)).doWork()
+
+        assertEquals(listOf(1L, 2L, 3L, 4L), posted().sorted())
     }
 }

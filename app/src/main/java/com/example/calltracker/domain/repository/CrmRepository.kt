@@ -25,3 +25,8 @@ interface CrmRepository {
      */
     suspend fun createLead(lead: NewLead, idempotencyKey: String, now: Long): CreateLeadResult
 }
+
+/** Asks for a CRM lookup run soon, for the numbers whose answer is missing or stale. */
+interface CrmLookupRequester {
+    fun requestLookup()
+}

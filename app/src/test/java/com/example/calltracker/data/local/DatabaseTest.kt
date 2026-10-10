@@ -21,10 +21,12 @@ import com.example.calltracker.domain.model.CallType
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.ClassificationSource
 import com.example.calltracker.domain.model.SyncStatus
+import com.example.calltracker.domain.repository.CallPromptDismisser
+import com.example.calltracker.domain.repository.CrmLookupRequester
+import com.example.calltracker.domain.repository.SyncRequester
 import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
 import com.example.calltracker.domain.usecase.SetCallClassificationUseCase
 import com.example.calltracker.domain.usecase.SyncGate
-import com.example.calltracker.domain.repository.SyncRequester
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -79,18 +81,20 @@ class DatabaseTest {
         )
 
     @Test
-    fun numbersNeedingCrmLookupSkipsAnswersNewerThanTheCallAndPersonalNumbers() = runTest {
+    fun numbersNeedingCrmLookupOnlyListsProfessionalNumbersWithoutAFreshAnswer() = runTest {
         val dao = db.callDao()
         val base = 1_789_000_000_000L
-        dao.insertIgnore(call(1, "+919000000001"))                    // never looked up → needed
-        dao.insertIgnore(call(2, "+919000000002"))                    // fresh answer → skip
-        dao.insertIgnore(call(3, "+919000000003"))                    // stale answer → needed
-        dao.insertIgnore(call(4, "+919000000004"))                    // personal rule → never
+        fun pro(id: Long, number: String?) = call(id, number, Classification.BUSINESS, ClassificationSource.USER_RULE)
+        dao.insertIgnore(pro(1, "+919000000001"))                     // never looked up → needed
+        dao.insertIgnore(pro(2, "+919000000002"))                     // fresh answer → skip
+        dao.insertIgnore(pro(3, "+919000000003"))                     // stale answer → needed
+        dao.insertIgnore(pro(4, "+919000000004"))                     // personal rule → never
         dao.insertIgnore(call(5, "+919000000005", Classification.PERSONAL, ClassificationSource.USER_MANUAL))
-        dao.insertIgnore(call(6, "+919000000005"))                    // same number, other call → still never
-        dao.insertIgnore(call(7, null))                               // private → never
-        dao.insertIgnore(call(8, "+919000000001"))                    // duplicate number → listed once
-        dao.insertIgnore(call(9, "+919000000009"))                    // fresh answer, but from before this call ended → needed
+        dao.insertIgnore(pro(6, "+919000000005"))                     // same number, other call → still never
+        dao.insertIgnore(pro(7, null))                                // private → never
+        dao.insertIgnore(pro(8, "+919000000001"))                     // duplicate number → listed once
+        dao.insertIgnore(pro(9, "+919000000009"))                     // fresh answer, but from before this call ended → needed
+        dao.insertIgnore(call(10, "+919000000010"))                   // unsorted: not professional → never sent
         // Calls last 30 s: the answer for +…02 came after its call ended, the one for +…09 during the call.
         db.crmCacheDao().upsert(CrmCacheEntity("+919000000002", null, null, null, null, fetchedAt = base + 60_000))
         db.crmCacheDao().upsert(CrmCacheEntity("+919000000009", null, null, null, null, fetchedAt = base + 10_000))
@@ -217,7 +221,7 @@ class DatabaseTest {
         val rules = NumberRuleRepositoryImpl(db.numberRuleDao())
         val tx = RoomTransactionRunner(db)
         val gate = SyncGate(calls, activities, outbox, clock)
-        val setClassification = SetCallClassificationUseCase(calls, activities, rules, gate, tx, clock)
+        val setClassification = SetCallClassificationUseCase(calls, activities, rules, gate, object : CrmLookupRequester { override fun requestLookup() = Unit }, object : CallPromptDismisser { override fun dismiss(callIds: Set<Long>) = Unit }, tx, clock)
         val save = SaveActivityLogUseCase(calls, activities, gate, tx, clock)
 
         val a = db.callDao().insertIgnore(call(1))

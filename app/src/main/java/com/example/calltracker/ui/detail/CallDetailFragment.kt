@@ -1,12 +1,15 @@
 package com.example.calltracker.ui.detail
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import androidx.activity.OnBackPressedCallback
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -16,13 +19,17 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.example.calltracker.R
 import com.example.calltracker.databinding.FragmentCallDetailBinding
 import com.example.calltracker.domain.model.ActivityLog
+import com.example.calltracker.domain.model.CallRecord
 import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.domain.model.CrmRecordType
 import com.example.calltracker.domain.model.SyncStatus
 import com.example.calltracker.domain.usecase.SaveActivityLogUseCase
+import com.example.calltracker.ui.common.CallVisuals
 import com.example.calltracker.ui.common.FollowUpDatePicker
 import com.example.calltracker.ui.common.Formatters
 import com.example.calltracker.ui.common.OutcomeChoices
+import com.example.calltracker.ui.navigator
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,6 +45,8 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
     private var rendering = false
     private var renderedFormVersion = -1
 
+    /** Set when the call was just made professional from the classify dialog; cleared once the form is in view. */
+    private var scrollToLogForm = false
 
     private val unsavedChangesGuard = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
@@ -62,16 +71,7 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
 
         bindClassification(binding)
         bindForm(binding)
-        binding.createLeadButton.setOnClickListener {
-            val call = viewModel.state.value.call ?: return@setOnClickListener
-            CreateLeadDialogFragment.newInstance(call.deviceContactName).show(childFragmentManager, CreateLeadDialogFragment.TAG)
-        }
-        childFragmentManager.setFragmentResultListener(CreateLeadDialogFragment.REQUEST_KEY, viewLifecycleOwner) { _, result ->
-            viewModel.createLead(
-                result.getString(CreateLeadDialogFragment.RESULT_NAME).orEmpty(),
-                result.getString(CreateLeadDialogFragment.RESULT_COMPANY),
-            )
-        }
+        bindDialogs(binding)
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -116,6 +116,31 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.retryUploadButton.setOnClickListener { viewModel.retryUpload() }
     }
 
+    /** Create lead, Classify call and Call saved all answer through the Fragment Result API (rotation-safe). */
+    private fun bindDialogs(binding: FragmentCallDetailBinding) {
+        binding.createLeadButton.setOnClickListener {
+            val call = viewModel.state.value.call ?: return@setOnClickListener
+            CreateLeadDialogFragment.newInstance(call.deviceContactName, call.rawNumber)
+                .show(childFragmentManager, CreateLeadDialogFragment.TAG)
+        }
+        childFragmentManager.setFragmentResultListener(CreateLeadDialogFragment.REQUEST_KEY, viewLifecycleOwner) { _, result ->
+            viewModel.createLead(
+                result.getString(CreateLeadDialogFragment.RESULT_NAME).orEmpty(),
+                result.getString(CreateLeadDialogFragment.RESULT_COMPANY),
+            )
+        }
+        childFragmentManager.setFragmentResultListener(ClassifyCallDialogFragment.REQUEST_KEY, viewLifecycleOwner) { _, result ->
+            val classification = result.getString(ClassifyCallDialogFragment.RESULT_CLASSIFICATION)?.let(Classification::valueOf)
+                ?: return@setFragmentResultListener
+            // Professional goes straight to logging: the form appears on this screen, so bring it into view.
+            scrollToLogForm = classification == Classification.BUSINESS
+            viewModel.classify(classification, result.getBoolean(ClassifyCallDialogFragment.RESULT_APPLY_TO_NUMBER))
+        }
+        childFragmentManager.setFragmentResultListener(CallSavedDialogFragment.REQUEST_KEY, viewLifecycleOwner) { _, result ->
+            if (result.getBoolean(CallSavedDialogFragment.RESULT_VIEW_ACTIVITIES)) navigator.showCallList()
+        }
+    }
+
     private fun EditText.watch(onChange: (String) -> Unit) = doAfterTextChanged {
         if (!rendering) onChange(it?.toString().orEmpty())
     }
@@ -132,20 +157,13 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
 
             val name = Formatters.displayName(context, call)
             binding.name.text = name
+            CallVisuals.bindAvatar(binding.avatar, name, sizeDp = 56)
+            binding.who.text = CallVisuals.whoLine(context, call)
             binding.number.text = call.rawNumber
             binding.number.isVisible = !call.rawNumber.isNullOrBlank() && call.rawNumber != name
-            binding.meta.text = listOfNotNull(
-                getString(Formatters.callTypeLabel(call.type)),
-                Formatters.dateTime(context, call.startedAt),
-                Formatters.duration(context, call.durationSec),
-                call.simSlot?.let { getString(R.string.detail_sim, it + 1) },
-            ).joinToString(" · ")
-            val crm = call.crmMatch
-            binding.crm.isVisible = crm != null
-            if (crm != null) {
-                val kind = getString(if (crm.type == CrmRecordType.LEAD) R.string.detail_crm_lead else R.string.detail_crm_contact)
-                binding.crm.text = crm.company?.let { getString(R.string.detail_crm, kind, it) } ?: kind
-            }
+            CallVisuals.applyPill(binding.classificationPill, CallVisuals.classificationPill(call.classification), withIcon = false)
+            renderMeta(binding, call)
+            renderCrm(binding, state)
 
             when (call.classification) {
                 Classification.BUSINESS -> binding.classificationToggle.check(R.id.businessButton)
@@ -154,11 +172,13 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
             }
             binding.source.setText(Formatters.classificationSourceLabel(call.classificationSource))
             binding.applyToNumber.isVisible = call.normalizedNumber != null
-            binding.createLeadButton.isVisible = state.canCreateLead
-            binding.createLeadButton.isEnabled = !state.creatingLead
 
             binding.logHint.isVisible = !state.canLog
             binding.logForm.isVisible = state.canLog
+            if (scrollToLogForm && state.canLog) {
+                scrollToLogForm = false
+                binding.scroll.post { binding.scroll.smoothScrollTo(0, binding.logForm.top) }
+            }
             if (state.formVersion != renderedFormVersion) {
                 renderedFormVersion = state.formVersion
                 fillForm(binding, state.draft)
@@ -174,9 +194,69 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
             } else {
                 getString(Formatters.syncStatusLabel(activity?.syncStatus))
             }
+            renderSyncIcon(binding, activity?.syncStatus)
+            askForClassificationOnce(call)
         } finally {
             rendering = false
         }
+    }
+
+    private fun renderMeta(binding: FragmentCallDetailBinding, call: CallRecord) {
+        val context = requireContext()
+        val type = CallVisuals.callTypePill(call.type)
+        binding.metaType.setText(type.label)
+        binding.metaType.setCompoundDrawablesRelativeWithIntrinsicBounds(type.icon ?: 0, 0, 0, 0)
+        TextViewCompat.setCompoundDrawableTintList(binding.metaType, ContextCompat.getColorStateList(context, type.foreground))
+        binding.metaDate.text = Formatters.dayTime(context, call.startedAt)
+        binding.metaDuration.text = Formatters.duration(context, call.durationSec)
+        binding.metaSim.isVisible = call.simSlot != null
+        binding.metaSim.text = call.simSlot?.let { getString(R.string.detail_sim, it + 1) }
+    }
+
+    /** The CRM record the call is linked to, or (no match) the offer to create a lead. */
+    private fun renderCrm(binding: FragmentCallDetailBinding, state: CallDetailUiState) {
+        val crm = state.call?.crmMatch
+        binding.crmCard.isVisible = crm != null
+        binding.noCrmCard.isVisible = crm == null
+        if (crm != null) {
+            binding.crmName.text = crm.name
+            CallVisuals.bindAvatar(binding.crmAvatar, crm.name)
+            val kind = getString(if (crm.type == CrmRecordType.LEAD) R.string.crm_kind_lead else R.string.crm_kind_contact)
+            binding.crm.text = crm.company?.let { getString(R.string.detail_crm, kind, it) } ?: kind
+        } else {
+            binding.noCrmText.setText(
+                when {
+                    state.canCreateLead -> R.string.detail_no_crm_match
+                    state.call?.normalizedNumber == null -> R.string.lead_no_number
+                    else -> R.string.detail_no_crm_personal
+                },
+            )
+        }
+        binding.createLeadButton.isVisible = state.canCreateLead
+        binding.createLeadButton.isEnabled = !state.creatingLead
+    }
+
+    private fun renderSyncIcon(binding: FragmentCallDetailBinding, status: SyncStatus?) {
+        val pill = CallVisuals.syncPill(status)
+        binding.syncStatus.setCompoundDrawablesRelativeWithIntrinsicBounds(pill?.icon ?: R.drawable.ic_shield, 0, 0, 0)
+        val tint = pill?.let { ContextCompat.getColorStateList(requireContext(), it.foreground) }
+            ?: ColorStateList.valueOf(MaterialColors.getColor(binding.syncStatus, com.google.android.material.R.attr.colorOnSurfaceVariant))
+        TextViewCompat.setCompoundDrawableTintList(binding.syncStatus, tint)
+    }
+
+    /** Opened from a "Work call?" notification: ask once, if the call still isn't decided. */
+    private fun askForClassificationOnce(call: CallRecord) {
+        val args = requireArguments()
+        if (!args.getBoolean(ARG_ASK_CLASSIFICATION)) return
+        args.putBoolean(ARG_ASK_CLASSIFICATION, false)
+        if (call.classification != Classification.UNCLASSIFIED) return
+        if (childFragmentManager.findFragmentByTag(ClassifyCallDialogFragment.TAG) != null) return
+        val line = listOf(
+            call.rawNumber?.takeIf { it.isNotBlank() && !it.startsWith("-") } ?: getString(R.string.call_private_number),
+            getString(Formatters.callTypeLabel(call.type)),
+            Formatters.dayTime(requireContext(), call.startedAt),
+        ).joinToString(" · ")
+        ClassifyCallDialogFragment.newInstance(line).show(childFragmentManager, ClassifyCallDialogFragment.TAG)
     }
 
     private fun fillForm(binding: FragmentCallDetailBinding, log: ActivityLog) {
@@ -189,7 +269,6 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
     private fun renderFollowUp(binding: FragmentCallDetailBinding, followUpAt: Long?) {
         binding.followUp.setText(followUpAt?.let { Formatters.date(requireContext(), it) })
         binding.followUpLayout.isEndIconVisible = followUpAt != null
-        binding.followUpLayout.placeholderText = getString(R.string.detail_follow_up_none)
     }
 
     private fun renderErrors(binding: FragmentCallDetailBinding, invalid: Set<SaveActivityLogUseCase.Field>) {
@@ -199,9 +278,28 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
         binding.remarksLayout.error = tooLong.takeIf { SaveActivityLogUseCase.Field.REMARKS in invalid }
     }
 
+    /** "Call Activity Saved!" with a summary of what was just saved. */
+    private fun showSaved(state: CallDetailUiState) {
+        val call = state.call ?: return
+        val context = requireContext()
+        val log = state.activity?.log ?: state.draft
+        CallSavedDialogFragment.newInstance(
+            name = Formatters.displayName(context, call),
+            who = CallVisuals.whoLine(context, call),
+            callType = getString(Formatters.callTypeLabel(call.type)),
+            duration = Formatters.duration(context, call.durationSec),
+            outcome = log.outcome?.let { OutcomeChoices.label(context, it) },
+            followUp = log.followUpAt?.let { Formatters.date(context, it) },
+            nextAction = log.nextAction,
+        ).show(childFragmentManager, CallSavedDialogFragment.TAG)
+    }
+
     private fun onEvent(binding: FragmentCallDetailBinding, event: CallDetailEvent) {
         val message = when (event) {
-            CallDetailEvent.Saved -> getString(R.string.detail_saved)
+            CallDetailEvent.Saved -> {
+                showSaved(viewModel.state.value)
+                return
+            }
             CallDetailEvent.NotBusiness -> getString(R.string.detail_log_hint_not_business)
             CallDetailEvent.AlreadyUploaded -> {
                 MaterialAlertDialogBuilder(requireContext())
@@ -222,8 +320,11 @@ class CallDetailFragment : Fragment(R.layout.fragment_call_detail) {
     }
 
     companion object {
-        fun newInstance(callId: Long) = CallDetailFragment().apply {
-            arguments = bundleOf(CallDetailViewModel.ARG_CALL_ID to callId)
+        private const val ARG_ASK_CLASSIFICATION = "ask_classification"
+
+        /** [askClassification]: show the classify dialog on top if the call is still unsorted. */
+        fun newInstance(callId: Long, askClassification: Boolean = false) = CallDetailFragment().apply {
+            arguments = bundleOf(CallDetailViewModel.ARG_CALL_ID to callId, ARG_ASK_CLASSIFICATION to askClassification)
         }
     }
 }

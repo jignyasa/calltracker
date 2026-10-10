@@ -19,7 +19,7 @@ class CallReclassifier @Inject constructor(
     /** @return true if the call's classification changed. */
     suspend fun reclassify(call: CallRecord, workSimSlot: Int?): Boolean {
         if (call.classificationSource == ClassificationSource.USER_MANUAL) return false
-        val signals = gatherSignals(call.normalizedNumber, call.simSlot, call.deviceContactName != null, workSimSlot)
+        val signals = gatherSignals(call.normalizedNumber, call.simSlot, workSimSlot)
         val decision = classify(signals)
         if (decision.classification == call.classification && decision.source == call.classificationSource) return false
 

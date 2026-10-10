@@ -7,6 +7,7 @@ import com.example.calltracker.data.local.AppDatabase
 import com.example.calltracker.data.local.AppDatabaseFactory
 import com.example.calltracker.data.local.security.DatabaseKeyProvider
 import com.example.calltracker.data.phone.LibPhoneNumberNormalizer
+import com.example.calltracker.data.remote.ActivityUploaderImpl
 import com.example.calltracker.data.repository.ActivityRepositoryImpl
 import com.example.calltracker.data.repository.CallRepositoryImpl
 import com.example.calltracker.data.repository.CrmRepositoryImpl
@@ -17,23 +18,26 @@ import com.example.calltracker.data.repository.SettingsRepositoryImpl
 import com.example.calltracker.data.repository.SweepStateRepositoryImpl
 import com.example.calltracker.domain.phone.PhoneNumberNormalizer
 import com.example.calltracker.domain.repository.ActivityRepository
+import com.example.calltracker.domain.repository.ActivityUploader
 import com.example.calltracker.domain.repository.CallLogSource
+import com.example.calltracker.domain.repository.CallPromptDismisser
 import com.example.calltracker.domain.repository.CallRepository
+import com.example.calltracker.domain.repository.CrmLookupRequester
 import com.example.calltracker.domain.repository.CrmRepository
 import com.example.calltracker.domain.repository.NumberRuleRepository
 import com.example.calltracker.domain.repository.OutboxRepository
 import com.example.calltracker.domain.repository.SettingsRepository
 import com.example.calltracker.domain.repository.SimCardSource
-import com.example.calltracker.data.remote.ActivityUploaderImpl
-import com.example.calltracker.domain.repository.ActivityUploader
+import com.example.calltracker.domain.repository.SweepStateRepository
 import com.example.calltracker.domain.repository.SyncRequester
+import com.example.calltracker.domain.repository.TransactionRunner
+import com.example.calltracker.sync.CrmLookupScheduler
 import com.example.calltracker.sync.SweepRequester
 import com.example.calltracker.sync.SweepScheduler
 import com.example.calltracker.sync.SyncScheduler
+import com.example.calltracker.ui.notifications.PostCallNotifier
 import com.example.calltracker.ui.postcall.PostCallLauncher
 import com.example.calltracker.ui.postcall.PostCallLogOffer
-import com.example.calltracker.domain.repository.SweepStateRepository
-import com.example.calltracker.domain.repository.TransactionRunner
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -101,7 +105,11 @@ abstract class RepositoryModule {
 
     @Binds abstract fun bindSyncRequester(impl: SyncScheduler): SyncRequester
 
+    @Binds abstract fun bindCrmLookupRequester(impl: CrmLookupScheduler): CrmLookupRequester
+
     @Binds abstract fun bindActivityUploader(impl: ActivityUploaderImpl): ActivityUploader
 
     @Binds abstract fun bindPostCallLogOffer(impl: PostCallLauncher): PostCallLogOffer
+
+    @Binds abstract fun bindCallPromptDismisser(impl: PostCallNotifier): CallPromptDismisser
 }

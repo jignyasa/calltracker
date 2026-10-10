@@ -12,6 +12,11 @@ interface ActivityUploader {
     }
 }
 
+/** Removes the "Work call?" prompts of calls that have just been decided, wherever the answer came from. */
+interface CallPromptDismisser {
+    fun dismiss(callIds: Set<Long>)
+}
+
 /** Asks for an upload run soon (after the current transaction has committed). */
 interface SyncRequester {
     fun requestSync()

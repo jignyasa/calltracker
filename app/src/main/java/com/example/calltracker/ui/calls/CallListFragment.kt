@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuItemCompat
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
@@ -28,7 +29,6 @@ import com.example.calltracker.domain.model.Classification
 import com.example.calltracker.ui.common.BackgroundRestrictions
 import com.example.calltracker.ui.navigator
 import com.example.calltracker.ui.permissions.CallPermissions
-import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -57,10 +57,12 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val binding = FragmentCallListBinding.bind(view).also { binding = it }
+        requireActivity().setTitle(R.string.title_call_activities)
         binding.list.adapter = adapter
         binding.grantButton.setOnClickListener { requestPermissions() }
         binding.batteryFix.setOnClickListener { navigator.openSettings() }
         binding.batteryDismiss.setOnClickListener { viewModel.dismissBatteryHint() }
+        binding.uploadSummary.setOnClickListener { navigator.openSyncQueue() }
         bindFilters(binding)
         keepNewestCallsInView(binding)
         addMenu()
@@ -121,14 +123,13 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
         binding.uploadSummary.isVisible = summary.isNotEmpty()
 
         binding.empty.setText(if (state.filter.isActive) R.string.empty_calls_filtered else R.string.empty_calls)
-        binding.classificationChips.check(
-            when (state.filter.classification) {
-                null -> R.id.chipAll
-                Classification.BUSINESS -> R.id.chipBusiness
-                Classification.PERSONAL -> R.id.chipPersonal
-                Classification.UNCLASSIFIED -> R.id.chipUnclassified
-            },
-        )
+        val tab = when (state.filter.classification) {
+            null -> R.id.tabAll
+            Classification.BUSINESS -> R.id.tabBusiness
+            Classification.PERSONAL -> R.id.tabPersonal
+            Classification.UNCLASSIFIED -> R.id.tabUnclassified
+        }
+        if (binding.classificationTabs.checkedButtonId != tab) binding.classificationTabs.check(tab)
         if (state.filter.sync != shownSyncFilter) {
             shownSyncFilter = state.filter.sync
             requireActivity().invalidateMenu() // re-tint the filter icon
@@ -136,12 +137,13 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
     }
 
     private fun bindFilters(binding: FragmentCallListBinding) {
-        binding.classificationChips.setOnCheckedStateChangeListener { _, checked ->
+        binding.classificationTabs.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
             viewModel.setClassificationFilter(
-                when (checked.firstOrNull()) {
-                    R.id.chipBusiness -> Classification.BUSINESS
-                    R.id.chipPersonal -> Classification.PERSONAL
-                    R.id.chipUnclassified -> Classification.UNCLASSIFIED
+                when (checkedId) {
+                    R.id.tabBusiness -> Classification.BUSINESS
+                    R.id.tabPersonal -> Classification.PERSONAL
+                    R.id.tabUnclassified -> Classification.UNCLASSIFIED
                     else -> null
                 },
             )
@@ -186,10 +188,8 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
 
                 override fun onPrepareMenu(menu: Menu) {
                     val active = shownSyncFilter != null
-                    val tint = MaterialColors.getColor(
-                        requireView(),
-                        if (active) androidx.appcompat.R.attr.colorPrimary else com.google.android.material.R.attr.colorOnSurfaceVariant,
-                    )
+                    // On the blue app bar: white, or amber while a status filter is on.
+                    val tint = ContextCompat.getColor(requireContext(), if (active) R.color.appbar_accent else R.color.white)
                     menu.findItem(R.id.action_status_filter)?.let { item ->
                         MenuItemCompat.setIconTintList(item, ColorStateList.valueOf(tint))
                     }
@@ -201,8 +201,6 @@ class CallListFragment : Fragment(R.layout.fragment_call_list) {
                         viewModel.uploadNow()
                         binding?.let { Snackbar.make(it.root, R.string.upload_started, Snackbar.LENGTH_SHORT).show() }
                     }
-                    R.id.action_rules -> true.also { navigator.openRules() }
-                    R.id.action_settings -> true.also { navigator.openSettings() }
                     else -> false
                 }
             },

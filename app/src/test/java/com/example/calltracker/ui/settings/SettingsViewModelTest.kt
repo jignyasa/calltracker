@@ -82,6 +82,17 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `create leads automatically is on by default and can be turned off`() = runTest {
+        val vm = viewModel()
+        vm.state.test { assertTrue(expectMostRecentItem().autoCreateLeads) }
+
+        vm.setAutoCreateLeads(false)
+
+        vm.state.test { assertFalse(expectMostRecentItem().autoCreateLeads) }
+        assertFalse(repos.autoCreateLeads())
+    }
+
+    @Test
     fun `refreshing picks up a swapped SIM`() = runTest {
         val vm = viewModel()
         sims = listOf(SimCard(0, "Vi"))

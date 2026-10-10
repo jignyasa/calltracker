@@ -40,4 +40,43 @@ class MigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate2To3TurnsOldAutomaticDecisionsIntoSavedAnswers() {
+        helper.createDatabase(name, 2).apply {
+            fun call(id: Int, number: String, classification: String, source: String) = execSQL(
+                "INSERT INTO calls (id, call_log_id, started_at, normalized_number, type, duration_sec, classification, " +
+                    "classification_source, created_at, updated_at) " +
+                    "VALUES ($id, $id, 1000, '$number', 'OUTGOING', 60, '$classification', '$source', 1000, 2000)",
+            )
+            call(1, "+919000000001", "BUSINESS", "CRM_MATCH")
+            call(2, "+919000000002", "PERSONAL", "DEVICE_CONTACT")
+            call(3, "+919000000003", "UNCLASSIFIED", "NONE")
+            call(4, "+919000000004", "PERSONAL", "DEVICE_CONTACT")
+            execSQL("INSERT INTO number_rules (normalized_number, classification, created_at) VALUES ('+919000000004', 'BUSINESS', 5)")
+            close()
+        }
+
+        val db = helper.runMigrationsAndValidate(name, 3, true, *ALL_MIGRATIONS)
+
+        val rules = db.query("SELECT normalized_number, classification FROM number_rules ORDER BY normalized_number").use {
+            buildList { while (it.moveToNext()) add(it.getString(0) to it.getString(1)) }
+        }
+        assertEquals(
+            listOf(
+                "+919000000001" to "BUSINESS",
+                "+919000000002" to "PERSONAL",
+                "+919000000004" to "BUSINESS", // the user's own rule is kept
+            ),
+            rules,
+        )
+        val calls = db.query("SELECT classification, classification_source FROM calls ORDER BY id").use {
+            buildList { while (it.moveToNext()) add(it.getString(0) to it.getString(1)) }
+        }
+        assertEquals(
+            listOf("BUSINESS" to "USER_RULE", "PERSONAL" to "USER_RULE", "UNCLASSIFIED" to "NONE", "PERSONAL" to "USER_RULE"),
+            calls,
+        )
+        db.close()
+    }
 }

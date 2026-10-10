@@ -20,7 +20,7 @@ quickly and exhaustively on the JVM; Android-specific pieces are tested with Rob
 ## Running the tests
 
 ```bash
-./gradlew testDebugUnitTest                                   # 130 JVM + Robolectric tests
+./gradlew testDebugUnitTest                                   # 154 JVM + Robolectric tests
 ./gradlew testDebugUnitTest --tests "*.SyncGateTest"          # one class
 ./gradlew connectedDebugAndroidTest                           # on-device (ANDROID_SERIAL=<id> to pick one)
 ./gradlew lintDebug                                           # warnings fail the build
@@ -30,17 +30,17 @@ cd mock-server && npm test                                    # 16 mock API test
 Robolectric tests use `@Config(sdk = [34])` (Robolectric needs JDK 21 for newer SDKs). SQLCipher can't load under
 Robolectric, so encryption is covered by the on-device `EncryptedDatabaseTest`.
 
-## What the automated tests cover (130 JVM tests)
+## What the automated tests cover (154 JVM tests)
 
 | Area | Tests | Examples |
 |---|---|---|
-| Classification | `ClassifyCallUseCaseTest` (6), `ResolveCrmMatchesUseCaseTest` (10), `SetCallClassificationUseCaseTest` (7) | precedence of rule → CRM → work SIM → contact; a hand-picked call is never overridden; numbers marked personal are never looked up; a number removed from the CRM is dequeued |
-| Privacy | `SyncGateTest` (6), `UploadPendingActivitiesUseCaseTest` (16), `LogHygieneTest` | only BUSINESS reaches the outbox; a non-business row injected into the outbox is still never sent; the payload has no contact name; no log line can print call data |
+| Classification | `ClassifyCallUseCaseTest` (5), `ResolveCrmMatchesUseCaseTest` (15), `SetCallClassificationUseCaseTest` (10) | saved answer → work SIM → ask (the CRM never decides); an answer is saved, so the number isn't asked again; only professional numbers are looked up; auto-create lead from the phonebook name (switch on/off, offline retry); a hand-picked call is never overridden |
+| Privacy | `SyncGateTest` (6), `UploadPendingActivitiesUseCaseTest` (17), `LogHygieneTest` | only BUSINESS reaches the outbox; a non-business row injected into the outbox is still never sent; the payload has no contact name; no log line can print call data |
 | Detection | `SweepCallLogUseCaseTest` (11), `CallTypeMappingTest`, `LibPhoneNumberNormalizerTest` (5) | 7-day backfill floor (incl. the device-found regression), late-committed rows, log wipes, paging, idempotent re-sweeps |
-| Sync | `UploadPendingActivitiesUseCaseTest` (16), `SyncWorkerTest` (5), `ActivityUploaderImplTest` (3, MockWebServer) | partial failure, 5xx/IO retry, duplicate replay, edit during upload, conflict (incl. skewed clock), crash recovery, stale CRM link, 250-item backlog in 100/100/50 |
-| CRM | `CrmRepositoryImplTest` (6, MockWebServer), `CreateLeadFromCallUseCaseTest` (6), `CrmLookupWorkerTest` (4) | 200/400/409/422/5xx/dropped connection; idempotent lead creation; prompts only for undecided calls; offline still prompts |
+| Sync | `UploadPendingActivitiesUseCaseTest` (17), `SyncWorkerTest` (5), `ActivityUploaderImplTest` (3, MockWebServer) | partial failure, 5xx/IO retry, duplicate replay, edit during upload, conflict (incl. skewed clock), crash recovery, stale CRM link (re-linked at once), 250-item backlog in 100/100/50 |
+| CRM | `CrmRepositoryImplTest` (6, MockWebServer), `CreateLeadFromCallUseCaseTest` (7), `CrmLookupWorkerTest` (9) | 200/400/409/422/5xx/dropped connection; idempotent lead creation; prompts only for undecided calls; offline still prompts; never more than 3 prompts showing |
 | Database | `DatabaseTest` (7, Robolectric + real Room SQL) | unique CallLog rows, cascades, outbox claim + generation guard, crash reset, lookup query, paged list filters and counts |
-| UI | `CallListViewModelTest` (7, Paging `asSnapshot`), `CallDetailViewModelTest` (10), `RulesViewModelTest` (4), `SettingsViewModelTest` (4), `PostCallPromptPolicyTest` (2), `OemBatteryGuideTest` (4) | filters survive process death; the form never overwrites typing; save shows the cleaned values; create lead; rules reclassify; work SIM re-applies |
+| UI | `CallListViewModelTest` (7, Paging `asSnapshot`), `SyncQueueViewModelTest` (5), `CallDetailViewModelTest` (11), `RulesViewModelTest` (4), `SettingsViewModelTest` (5), `PostCallPromptPolicyTest` (5), `OemBatteryGuideTest` (4) | filters survive process death; the form never overwrites typing; save shows the cleaned values; create lead (never on a personal call); no prompt for missed calls; rules reclassify; work SIM re-applies |
 
 Test doubles: `testing/FakeRepositories` implements every domain repository over one shared in-memory state (like the
 real database); `testing/TestUseCases` wires all use cases over it; `testing/MainDispatcherRule` runs `viewModelScope` on
@@ -59,7 +59,7 @@ calls and large backlogs, and fault injection on the mock server (`X-Mock-Fault`
 |---|---|
 | Detection | real outgoing calls picked up in ~3 s; with the app killed (broadcast restarts it); force-stopped (caught up on open); CallLog change without a call (content trigger); reboot; app update |
 | Robustness | 450-row backlog; app crashed mid-sweep → exactly the remainder imported; corrupted DB key → new key, DB rebuilt, calls re-imported |
-| Classification & CRM | CRM match upgrades a saved contact to Business; unknown → prompt (max 3); Business / Personal / Log from the notification; offline prompt resolved when the CRM came back |
+| Classification & CRM | (Before the 2026-10-10 call-flow change) CRM match upgraded a saved contact to Business; unknown → prompt (max 3); Business / Personal / Log from the notification; offline prompt resolved when the CRM came back |
 | UI | filters, detail form, rotation with unsaved notes, discard dialog, create lead, rules, work SIM (real SIMs), titles |
 | Sync | upload, UPDATED, 503 backoff, item ERROR, conflict, stale CRM link, clock skew; **airplane mode** (held by the network constraint, then uploaded by itself); **crash during an in-flight 100-item batch** (exactly 150 stored, no duplicates); **wrong token** (401 → kept → uploaded with the right build) |
 | Release APK | R8 build imported, classified and uploaded a 65-call backlog in 7 s; 10 unknown calls never sent; no app/network logs; paged list under load; Samsung battery prompt and screen |

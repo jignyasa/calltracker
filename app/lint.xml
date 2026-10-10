@@ -10,4 +10,10 @@
     <issue id="GradleDependency" severity="informational" />
     <issue id="AndroidGradlePluginVersion" severity="informational" />
     <issue id="NewerVersionAvailable" severity="informational" />
+
+    <!-- The side menu header is drawn inside the NavigationView, not on the window background, so its blue background
+         overdraws nothing; wrapping it only trades this for UselessParent. -->
+    <issue id="Overdraw">
+        <ignore path="src/main/res/layout/drawer_header.xml" />
+    </issue>
 </lint>

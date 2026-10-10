@@ -23,12 +23,12 @@
     <string name="call_type_voicemail">Voicemail</string>
     <string name="call_type_other">Other</string>
 
-    <string name="classification_business">Business</string>
+    <string name="classification_business">Professional</string>
     <string name="classification_personal">Personal</string>
     <string name="classification_unclassified">Unsorted</string>
 
     <string name="source_user_manual">Set by you</string>
-    <string name="source_user_rule">Your rule for this number</string>
+    <string name="source_user_rule">Saved for this number</string>
     <string name="source_crm_match">In CRM</string>
     <string name="source_work_sim">Work SIM</string>
     <string name="source_device_contact">Saved contact</string>
@@ -44,13 +44,27 @@
     <string name="sync_badge_synced">Synced</string>
     <string name="sync_badge_failed">Failed</string>
 
+    <string name="crm_kind_lead">Lead</string>
+    <string name="crm_kind_contact">Contact</string>
+    <string name="who_unknown">Unknown number</string>
+    <string name="day_today">Today, %1$s</string>
+    <string name="day_yesterday">Yesterday, %1$s</string>
+    <string name="day_other">%1$s, %2$s</string>
+    <string name="close">Close</string>
+
+    <!-- Navigation -->
+    <string name="title_call_activities">Call activities</string>
+    <string name="title_sync_queue">Sync queue</string>
+    <string name="title_about">Why this approach?</string>
+    <string name="drawer_tagline">Professional calls → CRM</string>
+    <string name="drawer_open">Open menu</string>
+
     <!-- Call list -->
     <string name="filter_all">All</string>
     <string name="filter_any_sync">Any status</string>
     <string name="filter_sync_pending">Pending</string>
     <string name="filter_sync_synced">Synced</string>
     <string name="filter_sync_failed">Failed</string>
-    <string name="menu_rules">Number rules</string>
     <string name="menu_upload_now">Upload now</string>
     <string name="menu_status_filter">Filter by upload status</string>
     <string name="upload_started">Uploading when online…</string>
@@ -64,45 +78,64 @@
     </plurals>
     <string name="detail_retry_upload">Retry upload</string>
     <string name="detail_retry_queued">Queued for upload again</string>
-    <string name="menu_settings">Settings</string>
 
     <!-- Call detail -->
     <string name="title_call_detail">Call details</string>
     <string name="detail_sim">SIM %1$d</string>
     <string name="detail_crm">%1$s · %2$s</string>
-    <string name="detail_crm_lead">CRM lead</string>
-    <string name="detail_crm_contact">CRM contact</string>
-    <string name="detail_classification_header">Work or personal?</string>
-    <string name="detail_apply_to_number">Always for this number</string>
+    <string name="detail_classification_header">Professional or personal?</string>
+    <string name="detail_apply_to_number">Remember for this number</string>
     <string name="detail_already_uploaded">This call was already uploaded to the CRM. Marking it personal stops future updates but can\'t remove it there.</string>
-    <string name="detail_log_header">Call log</string>
-    <string name="detail_log_hint_not_business">Mark this call as Business to log notes for the CRM.</string>
-    <string name="detail_notes">Notes</string>
-    <string name="detail_outcome">Outcome</string>
+    <string name="detail_log_hint_not_business">Mark this call as Professional to log notes for the CRM. Personal and unsorted calls stay on this phone.</string>
+    <string name="detail_notes">Call notes</string>
+    <string name="detail_outcome">Call outcome</string>
     <string name="detail_outcome_none">No outcome</string>
     <string name="detail_follow_up">Follow-up date</string>
     <string name="detail_follow_up_none">No follow-up</string>
     <string name="detail_follow_up_clear">Clear</string>
     <string name="detail_next_action">Next action</string>
-    <string name="detail_remarks">Remarks</string>
-    <string name="detail_save">Save</string>
-    <string name="detail_saved">Saved. It will be uploaded to the CRM.</string>
+    <string name="detail_remarks">Additional remarks (optional)</string>
+    <string name="detail_save">Save activity</string>
     <plurals name="detail_too_long">
         <item quantity="one">Too long (max %1$d character)</item>
         <item quantity="other">Too long (max %1$d characters)</item>
     </plurals>
     <string name="detail_not_found">This call is no longer available.</string>
-    <string name="detail_create_lead">Create lead</string>
+    <string name="detail_create_lead">Create new lead</string>
     <string name="detail_unsaved_title">Discard changes?</string>
     <string name="detail_unsaved_message">Your notes for this call aren\'t saved.</string>
     <string name="detail_discard">Discard</string>
     <string name="detail_keep_editing">Keep editing</string>
 
+    <string name="detail_associated_with">Associated with</string>
+    <string name="detail_no_crm_match">No matching lead or contact in the CRM.</string>
+    <string name="detail_no_crm_personal">Personal calls aren\'t linked to the CRM. Mark the call as Professional to create a lead.</string>
+    <string name="detail_notes_placeholder">Add call notes…</string>
+    <string name="detail_next_action_placeholder">e.g. Send proposal</string>
+    <string name="detail_remarks_placeholder">Anything else worth noting</string>
+
+    <!-- Classify call -->
+    <string name="classify_title">Classify call</string>
+    <string name="classify_question">Is this a business call?</string>
+    <string name="classify_explainer">This keeps personal calls private and only syncs business calls to the CRM.</string>
+    <string name="classify_professional">Professional / Business</string>
+    <string name="classify_professional_hint">Related to work, sales or a customer</string>
+    <string name="classify_personal_hint">Family, friends, personal</string>
+    <string name="classify_continue">Continue</string>
+
+    <!-- Call saved -->
+    <string name="saved_title">Call activity saved!</string>
+    <string name="saved_message">The call has been logged and will sync to the CRM when you\'re online.</string>
+    <string name="saved_view_activities">View in activities</string>
+    <string name="saved_back_to_call">Back to call</string>
+    <string name="saved_call_type">Call type</string>
+    <string name="saved_duration">Duration</string>
+
     <!-- Create lead -->
-    <string name="lead_title">Create CRM lead</string>
-    <string name="lead_name">Name</string>
-    <string name="lead_company">Company (optional)</string>
-    <string name="lead_create">Create</string>
+    <string name="lead_title">Create new lead</string>
+    <string name="lead_name">Name *</string>
+    <string name="lead_company">Company</string>
+    <string name="lead_create">Save lead</string>
     <string name="lead_created">Lead created: %1$s</string>
     <string name="lead_already_exists">Already in CRM as %1$s</string>
     <string name="lead_name_required">Enter a name</string>
@@ -110,16 +143,44 @@
     <string name="lead_rejected">The CRM rejected this lead (%1$s)</string>
     <string name="lead_no_number">This call has no number to save.</string>
 
+    <string name="lead_name_placeholder">Enter name</string>
+    <string name="lead_phone">Phone number *</string>
+    <string name="lead_company_placeholder">Enter company name (optional)</string>
+    <string name="lead_source">Source</string>
+    <string name="lead_source_phone_call">Phone call</string>
+    <string name="lead_footnote">The lead is created in the CRM with this call\'s number, and the call is logged as professional.</string>
+
+    <!-- Sync queue -->
+    <string name="queue_offline_title">You are offline</string>
+    <string name="queue_offline_text">Activities will sync automatically when you\'re back online.</string>
+    <string name="queue_tab_pending">Pending (%1$d)</string>
+    <string name="queue_tab_failed">Failed (%1$d)</string>
+    <string name="queue_empty_pending">Nothing waiting to upload</string>
+    <string name="queue_empty_failed">No failed uploads</string>
+    <string name="queue_empty_synced">Nothing uploaded yet</string>
+
+    <!-- Why this approach? -->
+    <string name="about_detection_title">Automatic detection</string>
+    <string name="about_detection_text">Every finished call is read from the phone\'s call log, the most reliable record on Android, even if the app was closed or the phone restarted.</string>
+    <string name="about_privacy_title">Privacy first</string>
+    <string name="about_privacy_text">Personal calls are never uploaded. Only calls marked Professional reach the CRM, and the database on the phone is encrypted.</string>
+    <string name="about_matching_title">Smart matching</string>
+    <string name="about_matching_text">Numbers are matched with existing leads and contacts in the CRM, or a new lead is created in one tap.</string>
+    <string name="about_sync_title">Reliable sync</string>
+    <string name="about_sync_text">Works offline and uploads with retries, duplicate prevention and conflict handling, so no call or note is lost or sent twice.</string>
+    <string name="about_real_world_title">Built for the real world</string>
+    <string name="about_real_world_text">Designed for low-end phones, poor networks, dual SIM and aggressive battery savers.</string>
+
     <!-- Rules -->
     <string name="title_rules">Number rules</string>
-    <string name="rules_empty">No rules yet. Use \"Always for this number\" on a call, or add one here.</string>
-    <string name="rules_explainer">A rule decides every call from that number, except calls you marked yourself.</string>
+    <string name="rules_empty">No saved numbers yet. Every Professional / Personal answer is saved here, or add one yourself.</string>
+    <string name="rules_explainer">A saved number is never asked about again: its calls follow the saved answer, except calls you marked yourself.</string>
     <string name="rules_add">Add rule</string>
     <string name="rules_number">Phone number</string>
     <string name="rules_invalid_number">Not a valid phone number</string>
-    <string name="rules_always_business">Always business</string>
+    <string name="rules_always_business">Always professional</string>
     <string name="rules_always_personal">Always personal</string>
-    <string name="rules_switch_to_business">Make business</string>
+    <string name="rules_switch_to_business">Make professional</string>
     <string name="rules_switch_to_personal">Make personal</string>
     <string name="rules_delete">Delete rule</string>
     <string name="rules_options">Rule options</string>
@@ -135,8 +196,14 @@
 
     <!-- Settings -->
     <string name="title_settings">Settings</string>
+    <string name="settings_section_logging">Call logging</string>
+    <string name="settings_section_background">Background</string>
+    <string name="settings_section_crm">CRM</string>
+    <string name="settings_auto_lead">Create leads automatically</string>
+    <string name="settings_auto_lead_summary">When a professional number isn\'t in the CRM and is saved in your phonebook, the lead is created with the saved name. Personal numbers are never sent.</string>
+    <string name="settings_rules_summary">Always professional or always personal for a number</string>
     <string name="settings_work_sim">Work SIM</string>
-    <string name="settings_work_sim_summary">Calls on this SIM count as business unless a rule says otherwise. Applies to the last 7 days and new calls.</string>
+    <string name="settings_work_sim_summary">Calls on this SIM count as professional unless a rule says otherwise. Applies to the last 7 days and new calls.</string>
     <string name="settings_work_sim_none">No work SIM</string>
     <string name="settings_sim_label">SIM %1$d · %2$s</string>
     <string name="settings_sim_label_unnamed">SIM %1$d</string>
@@ -170,7 +237,7 @@
     <string name="battery_hint_fix">Fix</string>
     <string name="battery_hint_dismiss">Not now</string>
     <string name="settings_privacy">Privacy</string>
-    <string name="settings_privacy_text">Only calls marked Business are uploaded. Personal and unsorted calls, contact names and the call log itself never leave this phone. The CRM is asked only whether a number is a customer.</string>
+    <string name="settings_privacy_text">Only calls marked Professional are uploaded. Personal and unsorted calls and the call log itself never leave this phone. The CRM is searched only for professional numbers, and a phonebook name is sent only to create a lead for one (if turned on above).</string>
 
     <!-- Notifications -->
     <string name="notification_channel_post_call">After-call questions</string>
@@ -184,10 +251,12 @@
     <string name="post_call_add_notes">Add notes</string>
     <string name="popup_skip">Skip</string>
     <string name="popup_more">More details</string>
+    <string name="popup_not_in_crm">Not in the CRM yet</string>
+    <string name="popup_create_lead">Create lead</string>
     <string name="popup_saved">Saved. It will be uploaded to the CRM.</string>
     <string name="settings_popup">After-call screen</string>
-    <string name="settings_popup_on">On. After a business call, the log form opens over whatever app you\'re in.</string>
-    <string name="settings_popup_off">Off. After a business call you get a notification instead. Allow \"Display over other apps\" so the log form opens by itself.</string>
+    <string name="settings_popup_on">On. After a professional call, the log form opens over whatever app you\'re in.</string>
+    <string name="settings_popup_off">Off. After a professional call you get a notification instead. Allow \"Display over other apps\" so the log form opens by itself.</string>
     <string name="settings_popup_allow">Allow display over other apps</string>
 
     <string name="outcome_interested">Interested</string>

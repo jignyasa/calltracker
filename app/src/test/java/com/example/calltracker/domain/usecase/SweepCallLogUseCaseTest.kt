@@ -83,8 +83,8 @@ class SweepCallLogUseCaseTest {
         val (unknown, contact, private) = repos.allCalls
         assertEquals("+919876543210", unknown.normalizedNumber)
         assertEquals(Classification.UNCLASSIFIED, unknown.classification)
-        assertEquals(ClassificationSource.DEVICE_CONTACT, contact.classificationSource)
-        assertEquals(Classification.PERSONAL, contact.classification)
+        assertEquals("a saved contact is asked once too", Classification.UNCLASSIFIED, contact.classification)
+        assertEquals("Mom", contact.deviceContactName)
         assertNull(private.normalizedNumber)
         assertTrue("nothing automatic may be queued without a business signal", repos.outbox.isEmpty())
     }
@@ -102,7 +102,7 @@ class SweepCallLogUseCaseTest {
     }
 
     @Test
-    fun `a cached CRM match makes a saved contact BUSINESS without any network call`() = runTest {
+    fun `a cached CRM record links a new call but doesn't decide it, and nothing goes to the network`() = runTest {
         val match = CrmMatch(CrmRecordType.CONTACT, "con_1", "Ananya", "Sharma Traders")
         repos.crmCache["+919876543210"] = CachedCrmLookup(match, now - TimeUnit.DAYS.toMillis(3))
         callLog.add(id = 1, startedAt = now - minute, number = "9876543210", cachedName = "Ananya (saved)")
@@ -110,10 +110,9 @@ class SweepCallLogUseCaseTest {
         sweep()
 
         val call = repos.allCalls.single()
-        assertEquals(Classification.BUSINESS, call.classification)
-        assertEquals(ClassificationSource.CRM_MATCH, call.classificationSource)
+        assertEquals(Classification.UNCLASSIFIED, call.classification)
         assertEquals(match, call.crmMatch)
-        assertEquals(setOf(call.id), repos.outbox.keys)
+        assertTrue(repos.outbox.isEmpty())
         assertTrue(repos.crmLookups.isEmpty())
     }
 

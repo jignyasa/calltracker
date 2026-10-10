@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Round avatar: initials on a colour, or a person icon for unknown numbers. Filled in by CallVisuals.bindAvatar. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="40dp"
+    android:layout_height="40dp"
+    android:background="@drawable/bg_avatar"
+    android:importantForAccessibility="noHideDescendants"
+    tools:backgroundTint="@color/avatar_1">
+
+    <TextView
+        android:id="@+id/avatarText"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.CallTracker.Avatar"
+        tools:text="RP" />
+
+    <ImageView
+        android:id="@+id/avatarIcon"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="9dp"
+        android:src="@drawable/ic_person"
+        android:visibility="gone"
+        app:tint="@color/white"
+        tools:ignore="ContentDescription" />
+</FrameLayout>

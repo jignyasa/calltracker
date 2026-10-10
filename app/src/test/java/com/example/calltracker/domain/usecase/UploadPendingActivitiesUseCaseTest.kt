@@ -311,7 +311,27 @@ class UploadPendingActivitiesUseCaseTest {
     }
 
     @Test
-    fun `stale CRM link - a call that was business only through the CRM drops out and is never sent`() = runTest {
+    fun `stale CRM link - a lookup is requested at once, and the record's new id re-links the call`() = runTest {
+        repos.addCall(1, number = "+919000000001", classification = Classification.BUSINESS, source = ClassificationSource.USER_MANUAL)
+        useCases.syncGate.reconcile(1)
+        val gone = CrmMatch(CrmRecordType.CONTACT, "con_00099", "Moved", null)
+        repos.setCrmMatch("+919000000001", gone)
+        repos.crmCache["+919000000001"] = com.example.calltracker.domain.model.CachedCrmLookup(gone, now)
+        uploader.statusFor = { if (it.contactId == "con_00099") UploadItemStatus.INVALID else UploadItemStatus.CREATED }
+
+        upload()
+
+        assertEquals("no waiting for the next sweep", 1, repos.crmLookupRequests)
+        // The requested lookup finds the same person, now a lead.
+        repos.crmDirectory["+919000000001"] = CrmMatch(CrmRecordType.LEAD, "lead_00042", "Moved", null)
+        useCases.resolveCrm()
+        upload()
+        assertEquals("lead_00042", uploader.batches.last().single().leadId)
+        assertEquals(SyncStatus.SYNCED, repos.outbox.getValue(1).status)
+    }
+
+    @Test
+    fun `stale CRM link - a call that was business only through the CRM (data from before v3) drops out and is never sent`() = runTest {
         val gone = CrmMatch(CrmRecordType.CONTACT, "con_00099", "Deleted contact", null)
         repos.crmCache["+919000000001"] = com.example.calltracker.domain.model.CachedCrmLookup(gone, now)
         repos.addCall(1, number = "+919000000001", classification = Classification.BUSINESS,
@@ -322,7 +342,7 @@ class UploadPendingActivitiesUseCaseTest {
 
         upload()
 
-        assertEquals("falls back to the device contact", Classification.PERSONAL, repos.getCall(1)!!.classification)
+        assertEquals("no saved answer: back to Unsorted, asked", Classification.UNCLASSIFIED, repos.getCall(1)!!.classification)
         assertFalse(1L in repos.outbox)
         upload()
         assertEquals("never sent again", 1, uploader.batches.size)

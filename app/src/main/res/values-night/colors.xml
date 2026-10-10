@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark palette: same names as values/colors.xml. -->
+<resources>
+    <color name="brand_primary">#FF8AB4F8</color>
+    <color name="brand_on_primary">#FF062E6F</color>
+    <color name="brand_primary_container">#FF24365A</color>
+    <color name="brand_on_primary_container">#FFD6E3FF</color>
+    <color name="brand_secondary">#FF8AB4F8</color>
+    <color name="appbar">#FF17305E</color>
+    <color name="appbar_accent">#FFFFD54F</color>
+
+    <color name="background">#FF111318</color>
+    <color name="surface">#FF15181D</color>
+    <color name="on_surface">#FFE3E6EC</color>
+    <color name="surface_variant">#FF2C313A</color>
+    <color name="on_surface_variant">#FFB8C0CC</color>
+    <color name="outline">#FF4A515C</color>
+    <color name="outline_variant">#FF30353D</color>
+    <color name="surface_container_lowest">#FF0F1215</color>
+    <color name="surface_container_low">#FF181B20</color>
+    <color name="surface_container">#FF1C1F25</color>
+    <color name="surface_container_high">#FF23272E</color>
+    <color name="surface_container_highest">#FF2B2F36</color>
+
+    <color name="pill_professional_bg">#FF1E2A44</color>
+    <color name="pill_professional_fg">#FF8AB4F8</color>
+    <color name="pill_personal_bg">#FF3D1F27</color>
+    <color name="pill_personal_fg">#FFF28B9B</color>
+    <color name="pill_unsorted_bg">#FF3A2A12</color>
+    <color name="pill_unsorted_fg">#FFFDB863</color>
+
+    <color name="pill_ok_bg">#FF17321F</color>
+    <color name="pill_ok_fg">#FF81C995</color>
+    <color name="pill_bad_bg">#FF3B1A17</color>
+    <color name="pill_bad_fg">#FFF28B82</color>
+    <color name="pill_neutral_bg">#FF2A2D33</color>
+    <color name="pill_neutral_fg">#FFBDC1C6</color>
+    <color name="pill_pending_bg">#FF3A2A12</color>
+    <color name="pill_pending_fg">#FFFDB863</color>
+
+    <color name="avatar_1">#FF4A67D6</color>
+    <color name="avatar_2">#FF7656C9</color>
+    <color name="avatar_3">#FF1A8783</color>
+    <color name="avatar_4">#FFC9701C</color>
+    <color name="avatar_5">#FFC04366</color>
+    <color name="avatar_6">#FF2F80B8</color>
+    <color name="avatar_unknown">#FF5A626E</color>
+
+    <color name="feature_blue_bg">#FF1E2A44</color>
+    <color name="feature_green_bg">#FF17321F</color>
+    <color name="feature_purple_bg">#FF2C2344</color>
+    <color name="feature_orange_bg">#FF3A2A12</color>
+    <color name="feature_teal_bg">#FF123331</color>
+    <color name="feature_purple_fg">#FFC3A6FF</color>
+    <color name="feature_orange_fg">#FFFDB863</color>
+    <color name="feature_teal_fg">#FF4DB6AC</color>
+</resources>

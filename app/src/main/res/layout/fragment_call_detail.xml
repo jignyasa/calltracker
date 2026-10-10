@@ -18,53 +18,238 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Header -->
-            <TextView
-                android:id="@+id/name"
+            <!-- Header: who, and the call itself -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                android:textIsSelectable="true"
-                tools:text="Ananya Sharma" />
+                android:layout_height="wrap_content">
 
-            <TextView
-                android:id="@+id/number"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceBodyLarge"
-                android:textIsSelectable="true"
-                tools:text="+91 98765 43210" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-            <TextView
-                android:id="@+id/meta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                tools:text="Outgoing · 9 Oct 2026, 11:40 · 1m 20s · SIM 2" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/crm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
-                android:textColor="?attr/colorPrimary"
-                tools:text="CRM contact · Sharma Traders" />
+                        <include
+                            android:id="@+id/avatar"
+                            layout="@layout/view_avatar"
+                            android:layout_width="56dp"
+                            android:layout_height="56dp" />
 
-            <!-- Classification -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/name"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceTitleLarge"
+                                android:textIsSelectable="true"
+                                android:textStyle="bold"
+                                tools:text="Rahul Patel" />
+
+                            <TextView
+                                android:id="@+id/who"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?attr/textAppearanceBodyMedium"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                tools:text="Lead · ABC Traders" />
+
+                            <TextView
+                                android:id="@+id/number"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:textAppearance="?attr/textAppearanceBodyMedium"
+                                android:textIsSelectable="true"
+                                tools:text="+91 98765 43210" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/classificationPill"
+                            style="@style/Widget.CallTracker.Pill"
+                            android:layout_marginStart="8dp"
+                            tools:backgroundTint="@color/pill_professional_bg"
+                            tools:text="Professional"
+                            tools:textColor="@color/pill_professional_fg" />
+                    </LinearLayout>
+
+                    <com.google.android.material.divider.MaterialDivider
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginVertical="12dp"
+                        app:dividerColor="?attr/colorOutlineVariant" />
+
+                    <!-- Type · when · how long (· SIM) -->
+                    <com.google.android.material.chip.ChipGroup
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="16dp"
+                        app:chipSpacingVertical="4dp">
+
+                        <TextView
+                            android:id="@+id/metaType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"
+                            tools:text="Outgoing" />
+
+                        <TextView
+                            android:id="@+id/metaDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"
+                            app:drawableStartCompat="@drawable/ic_event"
+                            app:drawableTint="?attr/colorOnSurfaceVariant"
+                            tools:text="Today, 10:24 AM" />
+
+                        <TextView
+                            android:id="@+id/metaDuration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"
+                            app:drawableStartCompat="@drawable/ic_schedule"
+                            app:drawableTint="?attr/colorOnSurfaceVariant"
+                            tools:text="4m 32s" />
+
+                        <TextView
+                            android:id="@+id/metaSim"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:drawablePadding="6dp"
+                            android:gravity="center_vertical"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"
+                            android:visibility="gone"
+                            app:drawableStartCompat="@drawable/ic_sim"
+                            app:drawableTint="?attr/colorOnSurfaceVariant"
+                            tools:text="SIM 2"
+                            tools:visibility="visible" />
+                    </com.google.android.material.chip.ChipGroup>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- CRM record: the match, or the offer to create a lead -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/detail_associated_with"
+                android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/crmCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLow">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <include
+                        android:id="@+id/crmAvatar"
+                        layout="@layout/view_avatar"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/crmName"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textStyle="bold"
+                            tools:text="Rahul Patel" />
+
+                        <TextView
+                            android:id="@+id/crm"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            tools:text="Lead · ABC Traders" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/pill_ok_fg" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/noCrmCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/noCrmText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/detail_no_crm_match"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <Button
+                        android:id="@+id/createLeadButton"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/detail_create_lead"
+                        app:icon="@drawable/ic_add" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Professional or personal -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="8dp"
                 android:text="@string/detail_classification_header"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
 
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/classificationToggle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 app:selectionRequired="false"
                 app:singleSelection="true">
 
@@ -74,7 +259,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/classification_business" />
+                    android:text="@string/classification_business"
+                    app:icon="@drawable/ic_work" />
 
                 <Button
                     android:id="@+id/personalButton"
@@ -82,46 +268,42 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/classification_personal" />
+                    android:text="@string/classification_personal"
+                    app:icon="@drawable/ic_person" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <TextView
                 android:id="@+id/source"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:textAppearance="?attr/textAppearanceBodySmall"
-                tools:text="Saved contact" />
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="In CRM" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/applyToNumber"
+                android:checked="true"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/detail_apply_to_number" />
 
-            <Button
-                android:id="@+id/createLeadButton"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="@string/detail_create_lead" />
-
             <!-- Activity log -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/detail_log_header"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
-
             <TextView
                 android:id="@+id/logHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_pill"
+                android:backgroundTint="?attr/colorSurfaceContainer"
+                android:drawablePadding="10dp"
+                android:gravity="center_vertical"
+                android:padding="14dp"
                 android:text="@string/detail_log_hint_not_business"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:drawableStartCompat="@drawable/ic_shield"
+                app:drawableTint="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
                 android:id="@+id/logForm"
@@ -129,31 +311,48 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/detail_notes"
+                    android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
+
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/notesLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/detail_notes"
                     app:counterEnabled="true"
-                    app:counterMaxLength="5000">
+                    app:counterMaxLength="5000"
+                    app:hintEnabled="false">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/notes"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="top"
+                        android:hint="@string/detail_notes_placeholder"
                         android:inputType="textMultiLine|textCapSentences"
                         android:minLines="3" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/detail_outcome"
+                    android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/outcomeLayout"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/detail_outcome">
+                    app:hintEnabled="false"
+                    app:startIconDrawable="@drawable/ic_check_circle"
+                    app:startIconTint="@color/pill_ok_fg">
 
                     <AutoCompleteTextView
                         android:id="@+id/outcome"
@@ -163,50 +362,96 @@
                         tools:ignore="LabelFor" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/followUpLayout"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/detail_follow_up"
-                    app:endIconContentDescription="@string/detail_follow_up_clear"
-                    app:endIconDrawable="@android:drawable/ic_menu_close_clear_cancel"
-                    app:endIconMode="custom">
+                    android:layout_marginTop="16dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/followUp"
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:cursorVisible="false"
-                        android:focusable="false"
-                        android:inputType="none" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/nextActionLayout"
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="6dp"
+                            android:text="@string/detail_follow_up"
+                            android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/followUpLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:endIconContentDescription="@string/detail_follow_up_clear"
+                            app:endIconDrawable="@drawable/ic_close"
+                            app:endIconMode="custom"
+                            app:hintEnabled="false"
+                            app:startIconDrawable="@drawable/ic_event">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/followUp"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:hint="@string/detail_follow_up_none"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="6dp"
+                            android:text="@string/detail_next_action"
+                            android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/nextActionLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:hintEnabled="false">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/nextAction"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="@string/detail_next_action_placeholder"
+                                android:inputType="textCapSentences" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/detail_next_action">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/nextAction"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textCapSentences" />
-                </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/detail_remarks"
+                    android:textAppearance="@style/TextAppearance.CallTracker.FieldLabel" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/remarksLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:hint="@string/detail_remarks">
+                    app:hintEnabled="false">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/remarks"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:hint="@string/detail_remarks_placeholder"
                         android:inputType="textMultiLine|textCapSentences" />
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -214,23 +459,29 @@
                     android:id="@+id/syncStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:layout_marginTop="16dp"
+                    android:drawablePadding="8dp"
+                    android:gravity="center_vertical"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:drawableStart="@drawable/ic_cloud_upload"
                     tools:text="Waiting to upload" />
 
                 <Button
                     android:id="@+id/retryUploadButton"
                     style="?attr/materialButtonOutlinedStyle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:text="@string/detail_retry_upload"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    app:icon="@drawable/ic_sync" />
 
                 <Button
                     android:id="@+id/saveButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="16dp"
                     android:text="@string/detail_save" />
             </LinearLayout>
         </LinearLayout>

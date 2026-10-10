@@ -35,7 +35,8 @@ class PostCallActionReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             try {
-                setClassification(callId, classification, applyToNumber = false)
+                // Saved for the number: it is never asked about again.
+                setClassification(callId, classification, applyToNumber = true)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

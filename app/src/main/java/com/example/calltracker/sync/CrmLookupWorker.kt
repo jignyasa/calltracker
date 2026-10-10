@@ -17,9 +17,10 @@ import dagger.assisted.AssistedInject
 import java.time.Clock
 
 /**
- * Resolves CRM matches for recent calls, then acts on the calls that just ended: asks "Work call?" about the ones
- * still UNCLASSIFIED, and offers the log form (pop-up) for the newest BUSINESS one. Both come after the lookup, so a
- * caller who is in the CRM is never asked about, and is offered the log form instead.
+ * Looks up recent professional numbers in the CRM (links their calls, or creates the lead), then acts on the calls
+ * that just ended: asks "Work call?" about the ones still UNCLASSIFIED (numbers with no saved answer), and offers the
+ * log form (pop-up) for the newest BUSINESS one. The lookup doesn't decide classification: unsorted and personal
+ * numbers are never sent to the CRM.
  */
 @HiltWorker
 class CrmLookupWorker @AssistedInject constructor(
@@ -36,7 +37,7 @@ class CrmLookupWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val prompt = inputData.getBoolean(KEY_PROMPT, false)
         val result = resolve()
-        Log.i(TAG, "Looked up ${result.lookedUp} numbers, reclassified ${result.reclassifiedCallIds.size} calls")
+        Log.i(TAG, "Looked up ${result.lookedUp} numbers, reclassified ${result.reclassifiedCallIds.size} calls, created ${result.leadsCreated} leads")
 
         // A call the CRM just decided no longer needs its prompt.
         for (id in result.reclassifiedCallIds) {
@@ -61,13 +62,22 @@ class CrmLookupWorker @AssistedInject constructor(
         }
     }
 
-    /** "Work call?" for calls the rules couldn't decide. */
-    private fun promptForUndecided(candidates: List<CallRecord>, now: Long) {
-        candidates
-            .filter { PostCallPromptPolicy.shouldPrompt(it, now) }
+    /**
+     * "Work call?" for calls the rules couldn't decide. At most [PostCallPromptPolicy.MAX_PROMPTS] show at once, across
+     * runs: the newest calls keep a prompt, an older one gives way (its call still waits under Unsorted in the app).
+     */
+    private suspend fun promptForUndecided(candidates: List<CallRecord>, now: Long) {
+        val fresh = candidates.filter { PostCallPromptPolicy.shouldPrompt(it, now) }
+        if (fresh.isEmpty()) return
+        val showing = notifier.shownPromptCallIds().mapNotNull { calls.getCall(it) }
+        val keep = (showing + fresh)
+            .distinctBy { it.id }
             .sortedByDescending { it.startedAt }
             .take(PostCallPromptPolicy.MAX_PROMPTS)
-            .forEach { notifier.show(it) }
+            .map { it.id }
+            .toSet()
+        showing.filter { it.id !in keep }.forEach { notifier.cancel(it.id) }
+        fresh.filter { it.id in keep && showing.none { shown -> shown.id == it.id } }.forEach { notifier.show(it) }
     }
 
     /**

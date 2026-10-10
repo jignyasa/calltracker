@@ -14,4 +14,14 @@ interface SettingsRepository {
     fun observeBatteryHintDismissed(): Flow<Boolean>
 
     suspend fun dismissBatteryHint()
+
+    /**
+     * When a professional number isn't in the CRM and the phonebook has a name for it, create the lead with that
+     * name without asking. On by default.
+     */
+    fun observeAutoCreateLeads(): Flow<Boolean>
+
+    suspend fun autoCreateLeads(): Boolean
+
+    suspend fun setAutoCreateLeads(enabled: Boolean)
 }

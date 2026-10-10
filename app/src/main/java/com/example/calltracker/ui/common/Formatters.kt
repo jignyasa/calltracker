@@ -13,14 +13,19 @@ import com.example.calltracker.domain.model.SyncStatus
 
 object Formatters {
 
-    fun relativeTime(context: Context, epochMs: Long): CharSequence =
-        DateUtils.getRelativeDateTimeString(
-            context,
-            epochMs,
-            DateUtils.MINUTE_IN_MILLIS,
-            DateUtils.WEEK_IN_MILLIS,
-            DateUtils.FORMAT_ABBREV_ALL,
-        )
+    /** "Today, 10:24 AM", "Yesterday, 6:45 PM", else "8 Oct, 11:02 AM" (the year only when it isn't this year). */
+    fun dayTime(context: Context, epochMs: Long): String {
+        val time = DateUtils.formatDateTime(context, epochMs, DateUtils.FORMAT_SHOW_TIME)
+        return when {
+            DateUtils.isToday(epochMs) -> context.getString(R.string.day_today, time)
+            DateUtils.isToday(epochMs + DateUtils.DAY_IN_MILLIS) -> context.getString(R.string.day_yesterday, time)
+            else -> context.getString(
+                R.string.day_other,
+                DateUtils.formatDateTime(context, epochMs, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH),
+                time,
+            )
+        }
+    }
 
     fun dateTime(context: Context, epochMs: Long): String =
         DateUtils.formatDateTime(
