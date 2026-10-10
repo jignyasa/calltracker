@@ -80,7 +80,7 @@ class SweepCallLogUseCase @Inject constructor(
     /** Local signals only (CRM cache, no network); [ResolveCrmMatchesUseCase] refines the result afterwards. */
     private suspend fun ingest(entry: CallLogEntry, workSimSlot: Int?, now: Long): Long? {
         val number = normalizer.normalize(entry.rawNumber)
-        val signals = gatherSignals(number, entry.simSlot, workSimSlot)
+        val signals = gatherSignals(entry.rawNumber, number, entry.simSlot, workSimSlot)
         return calls.insertIfNew(entry, number, classify(signals), signals.crmMatch, now)
     }
 

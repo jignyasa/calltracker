@@ -40,6 +40,12 @@ class ClassifyCallUseCaseTest {
     }
 
     @Test
+    fun `a service number is personal without asking, even on the work SIM`() {
+        val decision = classify(ClassificationSignals(isServiceNumber = true, isOnWorkSim = true))
+        assertEquals(ClassificationDecision(PERSONAL, ClassificationSource.SERVICE_NUMBER), decision)
+    }
+
+    @Test
     fun `an UNCLASSIFIED rule is ignored`() {
         val decision = classify(ClassificationSignals(userRule = UNCLASSIFIED, isOnWorkSim = true))
         assertEquals(ClassificationSource.WORK_SIM, decision.source)

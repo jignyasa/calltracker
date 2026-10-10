@@ -70,10 +70,14 @@ is linked), so no duplicate lead is made.
   is still current. An edit made during an upload is therefore re-sent, never silently dropped.
 - **Per-item results, never all-or-nothing:** `CREATED/DUPLICATE/UPDATED` → synced; `CONFLICT` → last write wins on
   `updatedAt` (the server's copy replaces the local one if newer); `INVALID` → permanent failure shown on the call with a
-  Retry button; `ERROR` → retried. Batch-level failures (no network, 5xx, 429, 401) keep every item.
+  Retry button and under the Sync queue's Failed tab; `ERROR` → retried. Batch-level failures (no network, 5xx, 429, 401)
+  keep every item.
 - **Two fixes found on a device:** a CRM record deleted/merged on the server used to block a call forever (the link is
-  now dropped, the call re-checked, and re-queued only if still business); and a CRM copy stamped by a clock running
-  ahead used to swallow later edits (a save is now always stamped after the version it replaced).
+  now dropped, the call re-checked, re-queued only if still professional, and the number looked up again at once, so a
+  record that moved to a new id re-links within one upload cycle); and a CRM copy stamped by a clock running ahead used
+  to swallow later edits (a save is now always stamped after the version it replaced).
+- **Sync status is one screen:** the Sync queue (Pending / Failed / Synced, offline banner, Upload now). The call list
+  only shows a "waiting to upload" banner that opens it, rather than repeating the same filter and button.
 - **Battery and network:** WorkManager with a network constraint and exponential backoff (30 s doubling), a 5 s debounce
   so a burst of edits is one run, batches of ≤100, ≤1000 items per run, unique work everywhere, hourly safety net.
 
@@ -101,7 +105,8 @@ is linked), so no duplicate lead is made.
 | Paging 3 | Thousands of calls without loading them all; filters in SQL | Manual limits |
 | libphonenumber | Correct E.164 normalisation for every Indian format (`0…`, `+91 …`, spaces) — matching depends on it | Regex |
 | Node/Express mock CRM | A real HTTP contract with idempotency, per-item results and fault injection to test against | Hard-coded fakes |
-| No navigation library | Five screens; plain fragment transactions are simpler | Navigation component |
+| No navigation library | About ten screens and dialogs in one activity with a side menu; plain fragment transactions and the Fragment Result API are simpler | Navigation component |
+| Material 3 with the app's own colour tokens | One DayNight theme; every colour is a token in `values/` + `values-night/`, so dark mode costs nothing per screen; shared avatars and pills (`CallVisuals`) keep screens consistent | Per-screen colours |
 
 ## 6. Assumptions
 
@@ -110,6 +115,12 @@ is linked), so no duplicate lead is made.
 - Phone numbers are Indian by default (`IN` region); other countries work when stored with a country code.
 - A rep uses one CRM account per phone; authentication is a static bearer token here (a real app would have a login and
   token refresh).
+- **The product owner's call flow is the product decision** (2026-10-10): classify first, ask once per number, search
+  the CRM only for professional calls. Where it departs from the assignment's "search on every completed call", the flow
+  wins, so personal numbers never reach the CRM.
+- **One number, one relationship:** an answer is saved for the number and applies to its later calls. A per-call answer
+  is still possible (untick "Remember for this number").
+- **A saved phonebook name is good enough as a lead name**; the rep can rename the lead in the CRM.
 - Calls older than 7 days at install time are not wanted.
 - A follow-up is a date (no time); stored as the local start of that day.
 - The user grants call-log and phone permissions — without them the app can't work, and says so.
@@ -126,9 +137,16 @@ is linked), so no duplicate lead is made.
 - **Database key creation and opening run on the main thread** on first use — a few tens of milliseconds on low-end
   phones.
 - **Calls imported before the dual-SIM fix** keep an empty SIM slot; changing the work SIM re-checks only the last 7 days.
-- **A CRM record created on the server side** is noticed on the number's next call (every completed call is searched
-  again), or within 24 h if it doesn't call again; creating the lead in the app is immediate. Either way, calls already
-  uploaded are re-sent with the new link.
+- **A CRM customer calling from a number the app hasn't classified is asked once** ("Work call?") before the CRM is
+  searched, because the CRM is only searched for professional calls. After that answer the number is remembered.
+- **A CRM record created on the server side** is noticed on the professional number's next call, or within 24 h if it
+  doesn't call again; creating the lead in the app is immediate. Either way, calls already uploaded are re-sent with the
+  new link.
+- **A number that is both work and personal** (a friend who is also a customer) follows its saved answer; a single
+  call has to be changed by hand with "Remember for this number" unticked.
+- **Auto-created leads carry only the phonebook name and the number**; the company stays empty until someone fills it in.
+- **A newer CRM copy replaces a local edit silently** (last write wins, as the contract says); the rep isn't told that
+  their edit was overwritten.
 - **Release APKs here are debug-signed** (no keystore in the repo).
 - **targetSdk is 36**, compileSdk 37 — raising the target needs its own review.
 
@@ -138,6 +156,10 @@ is linked), so no duplicate lead is made.
 - **Push-based CRM changes** (FCM or delta sync) instead of a 24 h lookup cache; bulk "is this number known?" lookups.
 - **Persist the log-form draft** across process death (today it survives rotation only).
 - **Search** in the call list; per-day summaries for the rep.
+- **Tell the rep when a CRM conflict replaced their edit**, with the overwritten text to copy back.
+- **Review automatically created leads**: a list of them, with the company to fill in and an undo.
+- **Smarter "ask once"**: suggest a per-call answer when a saved-Personal number calls during work hours on the work SIM,
+  instead of following the saved answer silently.
 - **Open the database off the main thread** (async DI provider or a startup initializer).
 - **Upload retention**: prune old synced calls and activities after N days to bound storage.
 - **Instrumented UI tests** (Espresso) for the main flows and a CI pipeline running unit tests, lint and a release build.

@@ -20,8 +20,9 @@ class FakeCallLogSource : CallLogSource {
         cachedName: String? = null,
         type: CallType = CallType.INCOMING,
         durationSec: Long = 30,
+        simSlot: Int? = null,
     ) {
-        rows += CallLogEntry(id, number, cachedName, type, startedAt, durationSec, phoneAccountId = null, simSlot = null)
+        rows += CallLogEntry(id, number, cachedName, type, startedAt, durationSec, phoneAccountId = null, simSlot = simSlot)
     }
 
     override suspend fun read(watermark: SweepWatermark, overlapMs: Long, afterId: Long, limit: Int): List<CallLogEntry> {

@@ -1,0 +1,176 @@
+<title>Fresh Install Test Plan</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column checklist; setup commands first, then numbered test cards with Do / Expect rows. */
+:root {
+  --bg: #f5f7f6; --surface: #ffffff; --surface-2: #eaf0ee; --fg: #16201e; --muted: #56645f; --line: #c9d4d0;
+  --accent: #0f6e6a; --biz: #157a4c; --biz-bg: #e3f3ea; --per: #b03a55; --per-bg: #f9e6eb;
+  --unc: #9a6a00; --unc-bg: #fbf1d8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1514; --surface: #17201e; --surface-2: #1d2a27; --fg: #e3ebe8; --muted: #93a39e; --line: #2f3f3b;
+  --accent: #4fc3bb; --biz: #5fd29a; --biz-bg: #173226; --per: #f08aa2; --per-bg: #3a1c25; --unc: #f0c060; --unc-bg: #3a2f14; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1514; --surface: #17201e; --surface-2: #1d2a27; --fg: #e3ebe8; --muted: #93a39e; --line: #2f3f3b;
+  --accent: #4fc3bb; --biz: #5fd29a; --biz-bg: #173226; --per: #f08aa2; --per-bg: #3a1c25; --unc: #f0c060; --unc-bg: #3a2f14; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body); }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: var(--font-display); margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4.5vw, 40px); letter-spacing: -0.02em; }
+h2 { font-size: 22px; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.eyebrow { font: 500 12px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+code { font: 0.86em var(--font-mono); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+section { display: grid; gap: 12px; }
+.status { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.stat b { font: 700 24px var(--font-display); display: block; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.cmd { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+.cmd pre { margin: 0; padding: 14px 16px; font: 13px/1.6 var(--font-mono); }
+.cmd button { position: absolute; top: 8px; right: 8px; font: 500 12px var(--font-body); background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.cmd button:focus-visible { outline: 2px solid var(--accent); }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.tests { display: grid; gap: 12px; counter-reset: t; }
+.test { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px;
+  grid-template-columns: 34px minmax(0, 1fr); }
+.test input { width: 20px; height: 20px; accent-color: var(--accent); margin: 3px 0 0; cursor: pointer; }
+.test .body { display: grid; gap: 6px; min-width: 0; }
+.test h3 { margin: 0; font: 600 16px var(--font-body); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.test h3 .n { font: 500 12px var(--font-mono); color: var(--muted); }
+.row { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.row > span:first-child { font: 500 11.5px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding-top: 2px; }
+.pill { font: 500 11px var(--font-mono); border-radius: 999px; padding: 1px 8px; border: 1px solid; }
+.pill.biz { color: var(--biz); background: var(--biz-bg); border-color: var(--biz); }
+.pill.per { color: var(--per); background: var(--per-bg); border-color: var(--per); }
+.pill.unc { color: var(--unc); background: var(--unc-bg); border-color: var(--unc); }
+.test.done { opacity: .6; }
+.note { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; font-size: 14px; }
+@media (max-width: 600px) { .status { grid-template-columns: repeat(2, minmax(0, 1fr)); } .row { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+</style>
+
+<div class="wrap">
+<header style="display:grid;gap:10px">
+  <div class="eyebrow">CallTracker · Samsung A50 · 10 Oct 2026</div>
+  <h1>Fresh Install Test Plan</h1>
+  <p class="muted">The mock CRM has been reset to its sample data. Reinstall the app, then work through the checks below. Tick each one as you go (ticks are remembered in this browser).</p>
+</header>
+
+<section>
+  <h2>CRM after reset</h2>
+  <div class="status">
+    <div class="stat"><b>3</b><span>sample contacts</span></div>
+    <div class="stat"><b>2</b><span>sample leads</span></div>
+    <div class="stat"><b>0</b><span>call activities</span></div>
+    <div class="stat"><b>0</b><span>app-created leads</span></div>
+  </div>
+  <p class="muted" style="font-size:13px">Removed: 2 leads the app created ("Test Customer", "Quote Prospect") and 12 activities. Backup kept as <code>db.backup.json</code> in the session scratchpad.</p>
+</section>
+
+<section>
+  <h2>1 · Set up</h2>
+  <p>Terminal 1, start the mock CRM:</p>
+  <div class="cmd"><button type="button" data-copy="c1">Copy</button><pre id="c1">cd D:\CallTracker\mock-server; npm start</pre></div>
+  <p>Terminal 2, reinstall the app on the phone (PowerShell):</p>
+  <div class="cmd"><button type="button" data-copy="c2">Copy</button><pre id="c2">$adb="$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+&amp; $adb uninstall com.example.calltracker
+&amp; $adb reverse tcp:3000 tcp:3000
+&amp; $adb install D:\CallTracker\dist\CallTracker-1.0-device.apk</pre></div>
+  <ul>
+    <li>Uninstall wipes the app's local database, number answers and settings.</li>
+    <li>Run <code>adb reverse</code> again whenever you reconnect the USB cable.</li>
+    <li>Open the app once and allow all permissions. Android sends no call events to an app that was never opened.</li>
+    <li>Watch the CRM by opening <code>http://localhost:3000/__admin/state</code> in a browser and refreshing after each step.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>2 · Checks</h2>
+  <div class="tests" id="tests">
+    <div class="test"><input type="checkbox" id="t1" aria-label="Done: first 7 days"><div class="body">
+      <h3><span class="n">01</span>First 7 days come in <span class="pill unc">Unsorted</span></h3>
+      <div class="row"><span>Do</span><span>Just open the app after installing.</span></div>
+      <div class="row"><span>Expect</span><span>Last 7 days of calls appear under Unsorted. No notifications for old calls. CRM still shows 0 activities.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t2" aria-label="Done: personal"><div class="body">
+      <h3><span class="n">02</span>Personal stays private <span class="pill per">Personal</span></h3>
+      <div class="row"><span>Do</span><span>Open an Unsorted call and choose Personal.</span></div>
+      <div class="row"><span>Expect</span><span>Every call from that number turns Personal. CRM unchanged: no lookup, no upload.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t3" aria-label="Done: professional auto lead"><div class="body">
+      <h3><span class="n">03</span>Professional + automatic lead <span class="pill biz">Professional</span></h3>
+      <div class="row"><span>Do</span><span>Open an Unsorted call from a saved phone contact and choose Professional.</span></div>
+      <div class="row"><span>Expect</span><span>Upload queue shows Synced. CRM gets a new lead with the phonebook name, plus activities for all that number's calls.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t4" aria-label="Done: live call prompt"><div class="body">
+      <h3><span class="n">04</span>Asked once on a live call <span class="pill unc">Prompt</span></h3>
+      <div class="row"><span>Do</span><span>Have a friend whose number has no answer yet call you. Talk, then hang up.</span></div>
+      <div class="row"><span>Expect</span><span>Within seconds a notification asks "Professional or Personal?". Tap Professional, fill outcome and notes, save.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t5" aria-label="Done: never asked again"><div class="body">
+      <h3><span class="n">05</span>Never asked again <span class="pill biz">Professional</span></h3>
+      <div class="row"><span>Do</span><span>The same friend calls again.</span></div>
+      <div class="row"><span>Expect</span><span>No notification. The call is Professional automatically and uploads.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t6" aria-label="Done: missed call"><div class="body">
+      <h3><span class="n">06</span>Missed call waits quietly <span class="pill unc">Unsorted</span></h3>
+      <div class="row"><span>Do</span><span>Let a call from a new number ring out.</span></div>
+      <div class="row"><span>Expect</span><span>No notification. It waits under Unsorted.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t7" aria-label="Done: work SIM"><div class="body">
+      <h3><span class="n">07</span>Work SIM <span class="pill biz">Professional</span></h3>
+      <div class="row"><span>Do</span><span>With two SIMs: Settings → choose SIM 2 as the work SIM.</span></div>
+      <div class="row"><span>Expect</span><span>SIM 2 calls from the last 7 days that you didn't classify by hand become Professional and upload.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t8" aria-label="Done: offline"><div class="body">
+      <h3><span class="n">08</span>Offline, then back online</h3>
+      <div class="row"><span>Do</span><span>Turn on airplane mode, mark a call Professional, then turn airplane mode off.</span></div>
+      <div class="row"><span>Expect</span><span>Upload queue shows it waiting, then Synced once the phone is online.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t9" aria-label="Done: server down"><div class="body">
+      <h3><span class="n">09</span>CRM server down</h3>
+      <div class="row"><span>Do</span><span>Stop <code>npm start</code>, make a Professional call, start the server again.</span></div>
+      <div class="row"><span>Expect</span><span>It retries with backoff and syncs later. No crash, nothing lost.</span></div></div></div>
+
+    <div class="test"><input type="checkbox" id="t10" aria-label="Done: undo before upload"><div class="body">
+      <h3><span class="n">10</span>Undo before upload <span class="pill per">Personal</span></h3>
+      <div class="row"><span>Do</span><span>Offline: mark a call Professional, then switch it to Personal. Go online.</span></div>
+      <div class="row"><span>Expect</span><span>Its item disappears from the Upload queue and never reaches the CRM.</span></div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Testing "found in CRM"</h2>
+  <p class="note">The 5 sample records use made-up numbers, so real calls never match them. To test linking to an existing contact, add your friend's number (E.164, e.g. <code>+9198…</code>) to <code>mock-server/src/seed.js</code>, then reset the CRM while the server runs:</p>
+  <div class="cmd"><button type="button" data-copy="c3">Copy</button><pre id="c3">curl.exe -X POST http://localhost:3000/__admin/reset</pre></div>
+  <p class="muted">Then mark that friend's call Professional: the call links to the existing contact and no new lead is created.</p>
+</section>
+</div>
+
+<script>
+document.querySelectorAll('.test input').forEach(function (box) {
+  var key = 'ft-' + box.id;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.closest('.test').classList.toggle('done', box.checked);
+  box.addEventListener('change', function () {
+    box.closest('.test').classList.toggle('done', box.checked);
+    try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+document.querySelectorAll('[data-copy]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var pre = document.getElementById(btn.dataset.copy);
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+    var fallback = function () { var r = document.createRange(); r.selectNodeContents(pre); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Press Ctrl+C'; };
+    if (navigator.clipboard) navigator.clipboard.writeText(pre.textContent).then(done, fallback); else fallback();
+  });
+});
+</script>

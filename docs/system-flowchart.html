@@ -1,0 +1,384 @@
+<title>CallTracker System Map</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each section = short explanation + a CSS-drawn flowchart (renders anywhere, no libraries). */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --surface-2: #eaf0ee;
+  --fg: #16201e;
+  --muted: #56645f;
+  --line: #c9d4d0;
+  --accent: #0f6e6a;          /* the app's teal: flow arrows, headings */
+  --biz: #157a4c;  --biz-bg: #e3f3ea;    /* Professional (BUSINESS) */
+  --per: #b03a55;  --per-bg: #f9e6eb;    /* Personal */
+  --unc: #9a6a00;  --unc-bg: #fbf1d8;    /* Unclassified */
+  --net: #3a55b0;  --net-bg: #e6ebfa;    /* network / CRM */
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1514; --surface: #17201e; --surface-2: #1d2a27; --fg: #e3ebe8; --muted: #93a39e; --line: #2f3f3b;
+  --accent: #4fc3bb; --biz: #5fd29a; --biz-bg: #173226; --per: #f08aa2; --per-bg: #3a1c25;
+  --unc: #f0c060; --unc-bg: #3a2f14; --net: #92a8f5; --net-bg: #1c2440; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1514; --surface: #17201e; --surface-2: #1d2a27; --fg: #e3ebe8; --muted: #93a39e; --line: #2f3f3b;
+  --accent: #4fc3bb; --biz: #5fd29a; --biz-bg: #173226; --per: #f08aa2; --per-bg: #3a1c25;
+  --unc: #f0c060; --unc-bg: #3a2f14; --net: #92a8f5; --net-bg: #1c2440; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+h3 { font-size: 17px; font-weight: 500; }
+p { margin: 0; max-width: 68ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; }
+.eyebrow { font: 500 12px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); font-size: 17px; margin-top: 12px; }
+header { display: grid; gap: 10px; margin-bottom: 28px; }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 40px; }
+nav.toc a { color: var(--fg); text-decoration: none; border: 1px solid var(--line); background: var(--surface);
+  padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+section { display: grid; gap: 14px; padding-block: 36px; border-top: 1px solid var(--line); }
+section > p { color: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+
+/* ---------- diagram canvas ---------- */
+.canvas { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; overflow-x: auto; }
+
+/* nodes */
+.node { background: var(--surface-2); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  min-width: 0; font-size: 14px; }
+.node b { display: block; font-weight: 600; }
+.node small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+.node code { font-size: 11.5px; color: var(--accent); }
+.node.ext { border-style: dashed; }
+.node.dec { border-color: var(--accent); border-width: 2px; background: var(--surface); position: relative; padding-left: 38px; }
+.node.dec::before { content: "?"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%) rotate(45deg);
+  width: 18px; height: 18px; border: 2px solid var(--accent); border-radius: 3px; display: grid; place-items: center;
+  font: 700 11px var(--font-mono); color: var(--accent); }
+.node.dec::after { content: ""; }
+.biz { background: var(--biz-bg); border-color: var(--biz); }
+.per { background: var(--per-bg); border-color: var(--per); }
+.unc { background: var(--unc-bg); border-color: var(--unc); }
+.net { background: var(--net-bg); border-color: var(--net); }
+.store { background: var(--surface); border-color: var(--accent); border-width: 2px; }
+
+/* vertical flow with arrows between children */
+.flow { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+.flow > * + * { margin-top: 26px; position: relative; }
+.flow > * + *::before { content: ""; position: absolute; left: 50%; top: -24px; height: 18px; border-left: 2px solid var(--accent); }
+.flow > * + *::after { content: ""; position: absolute; left: calc(50% - 5px); top: -9px;
+  border: 5px solid transparent; border-top: 6px solid var(--accent); border-bottom: 0; }
+.flow.narrow { max-width: 560px; margin-inline: auto; width: 100%; }
+
+/* horizontal pipeline that wraps to vertical on phones */
+.pipe { display: flex; align-items: stretch; gap: 0; }
+.pipe > .node { flex: 1 1 0; }
+.pipe > .arr { flex: 0 0 34px; display: grid; place-items: center; color: var(--accent); font: 700 18px var(--font-mono); }
+.pipe > .arr::before { content: "→"; }
+
+/* branches below a decision */
+.branches { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 14px; }
+.br { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.br > .lbl { font: 500 11.5px var(--font-mono); color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; text-align: center; }
+
+.row { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 14px; }
+.group { border: 1.5px dashed var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.group > .gt { font: 500 11.5px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+/* layered architecture */
+.layers { display: grid; gap: 10px; }
+.layer { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; background: var(--surface-2);
+  border-radius: 10px; padding: 12px 14px; border-left: 4px solid var(--accent); }
+.layer h3 { font-size: 16px; }
+.layer h3 small { display: block; font: 400 12px var(--font-mono); color: var(--muted); margin-top: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 400 12px var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+.dep { text-align: center; font: 500 12px var(--font-mono); color: var(--muted); }
+
+/* state machine */
+.states { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.state { text-align: center; border-radius: 999px; padding: 8px 6px; font: 600 12px var(--font-mono); border: 2px solid var(--line); background: var(--surface-2); }
+.transitions { display: grid; gap: 6px; margin-top: 16px; font-size: 13.5px; }
+.transitions div { display: grid; grid-template-columns: minmax(0, 260px) 1fr; gap: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.transitions div:last-child { border-bottom: 0; }
+.transitions .mono { color: var(--accent); }
+
+/* rule cards */
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rule { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--surface); display: grid; gap: 4px; }
+.rule b { font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.rule p { color: var(--muted); font-size: 14px; }
+
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 12px; }
+
+@media (max-width: 760px) {
+  .pipe { flex-direction: column; }
+  .pipe > .arr { flex-basis: 26px; }
+  .pipe > .arr::before { content: "↓"; }
+  .branches, .row { grid-template-columns: minmax(0, 1fr); }
+  .layer { grid-template-columns: minmax(0, 1fr); }
+  .states { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rules { grid-template-columns: minmax(0, 1fr); }
+  .transitions div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .canvas { padding: 14px; }
+}
+@media (prefers-reduced-motion: no-preference) { nav.toc a { transition: border-color .15s, color .15s; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">Android · Kotlin · MVVM + Clean Architecture</div>
+  <h1>CallTracker System Map</h1>
+  <p class="lede">How a phone call becomes a CRM activity: detected from the CallLog, classified on the device,
+    and uploaded only when it is a Professional call. Personal and unsorted calls never leave the phone.</p>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--biz-bg);border-color:var(--biz)"></i>Professional (BUSINESS)</span>
+    <span><i class="sw" style="background:var(--per-bg);border-color:var(--per)"></i>Personal</span>
+    <span><i class="sw" style="background:var(--unc-bg);border-color:var(--unc)"></i>Unclassified (ask once)</span>
+    <span><i class="sw" style="background:var(--net-bg);border-color:var(--net)"></i>Network / CRM</span>
+    <span><i class="sw" style="background:var(--surface);border-color:var(--accent);border-width:2px"></i>Room database</span>
+    <span><i class="sw" style="border-style:dashed;border-color:var(--muted)"></i>Outside the app</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#overview">1 · Whole system</a>
+  <a href="#layers">2 · Code layers</a>
+  <a href="#detect">3 · Call detection</a>
+  <a href="#classify">4 · Classification</a>
+  <a href="#crm">5 · CRM lookup &amp; lead</a>
+  <a href="#sync">6 · Upload (outbox)</a>
+  <a href="#states">7 · Outbox states</a>
+  <a href="#ui">8 · Screens</a>
+  <a href="#privacy">9 · Privacy rules</a>
+</nav>
+
+<!-- 1 -->
+<section id="overview">
+  <div class="eyebrow">01 · Whole system</div>
+  <h2>From a ringing phone to the CRM</h2>
+  <p>Every path runs through the encrypted Room database. The UI only reads Room; workers write to it; the network
+    is touched only for Professional numbers.</p>
+  <div class="canvas">
+    <div class="flow">
+      <div class="row" style="--n:3">
+        <div class="node ext"><b>Phone call happens</b><small>Dialer / SIM 1 or SIM 2</small></div>
+        <div class="node ext"><b>Android CallLog</b><small>number, type, start, duration, SIM — the source of truth</small></div>
+        <div class="node ext"><b>System events</b><small>PHONE_STATE idle, boot, app update, CallLog change, hourly timer, app open</small></div>
+      </div>
+      <div class="node"><b>Triggers → SweepScheduler</b><small><code>CallStateReceiver</code> · <code>BootReceiver</code> · <code>CallLogChangedWorker</code> · periodic worker. Triggers read no call data; they only schedule a sweep.</small></div>
+      <div class="node"><b>CallLogSweepWorker → SweepCallLogUseCase</b><small>Reads CallLog rows past the watermark (pages of 200), normalises numbers to E.164 (region IN), dedupes, advances the watermark in the same transaction.</small></div>
+      <div class="node dec"><b>Classify each call</b><small>Saved number rule → work-SIM setting → otherwise Unclassified</small></div>
+      <div class="branches" style="--n:3">
+        <div class="br"><div class="lbl">Professional</div>
+          <div class="node biz"><b>SyncGate.reconcile()</b><small>Creates the activity (client UUID) and enqueues it in the outbox</small></div></div>
+        <div class="br"><div class="lbl">Unclassified</div>
+          <div class="node unc"><b>Post-call notification</b><small>"Professional or Personal?" The answer becomes a rule for the number.</small></div></div>
+        <div class="br"><div class="lbl">Personal</div>
+          <div class="node per"><b>Stays on the device</b><small>No outbox row, no lookup, no log line</small></div></div>
+      </div>
+      <div class="node store"><b>Room database (SQLCipher, Keystore-wrapped key)</b><small>calls · activities · outbox · number_rules · crm_cache · sweep_state — single source of truth</small></div>
+      <div class="row" style="--n:2">
+        <div class="node net"><b>CrmLookupWorker</b><small>Looks up Professional numbers; auto-creates a lead from the phonebook name when missing</small></div>
+        <div class="node net"><b>SyncWorker</b><small>Uploads the outbox in batches of ≤100 with an Idempotency-Key per item</small></div>
+      </div>
+      <div class="node ext net"><b>Mock CRM server (Node + Express)</b><small><code>GET /contacts/lookup</code> · <code>POST /leads</code> · <code>POST /activities/batch</code></small></div>
+    </div>
+  </div>
+  <p class="note">The UI (call list, detail, queue, rules, settings) observes Room Flows. Network results are written to Room first and never shown straight from a response.</p>
+</section>
+
+<!-- 2 -->
+<section id="layers">
+  <div class="eyebrow">02 · Code layers</div>
+  <h2>One module, five packages</h2>
+  <p>Clean Architecture inside a single <code>:app</code> module. Dependencies point inward to <code>domain</code>, which is plain Kotlin and tested on the JVM. Hilt wires everything.</p>
+  <div class="canvas">
+    <div class="layers">
+      <div class="layer"><h3>ui<small>Fragments · ViewModels</small></h3>
+        <div class="chips"><span class="chip">MainActivity + AppNavigator</span><span class="chip">CallListFragment</span><span class="chip">CallDetailFragment</span><span class="chip">SyncQueueFragment</span><span class="chip">RulesFragment</span><span class="chip">SettingsFragment</span><span class="chip">PostCallActivity</span><span class="chip">PostCallNotifier</span></div></div>
+      <div class="layer"><h3>telephony · sync<small>Triggers · Workers</small></h3>
+        <div class="chips"><span class="chip">CallStateReceiver</span><span class="chip">BootReceiver</span><span class="chip">SweepScheduler</span><span class="chip">CallLogSweepWorker</span><span class="chip">CrmLookupWorker</span><span class="chip">SyncWorker</span></div></div>
+      <div class="dep">↓ all of these call ↓</div>
+      <div class="layer"><h3>domain<small>pure Kotlin</small></h3>
+        <div class="chips"><span class="chip">SweepCallLogUseCase</span><span class="chip">ClassifyCallUseCase</span><span class="chip">GatherClassificationSignals</span><span class="chip">SyncGate</span><span class="chip">CallReclassifier</span><span class="chip">ResolveCrmMatchesUseCase</span><span class="chip">UploadPendingActivitiesUseCase</span><span class="chip">PostCallPromptPolicy</span><span class="chip">SaveActivityLogUseCase</span><span class="chip">repository interfaces</span></div></div>
+      <div class="dep">↑ implemented by ↑</div>
+      <div class="layer"><h3>data<small>Room · Retrofit</small></h3>
+        <div class="chips"><span class="chip">AppDatabase + DAOs</span><span class="chip">DatabaseKeyProvider</span><span class="chip">AndroidCallLogSource</span><span class="chip">AndroidSimCardSource</span><span class="chip">LibPhoneNumberNormalizer</span><span class="chip">CrmApi + DTOs</span><span class="chip">*RepositoryImpl</span></div></div>
+      <div class="layer"><h3>di<small>Hilt modules</small></h3>
+        <div class="chips"><span class="chip">DataModule</span><span class="chip">NetworkModule</span><span class="chip">DispatchersModule</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="detect">
+  <div class="eyebrow">03 · Call detection</div>
+  <h2>Watermark sweep over the CallLog</h2>
+  <p>The broadcast receiver is only a doorbell. The CallLog provides the facts, and a watermark makes sure no call is missed or read twice, even after a reboot or a killed app.</p>
+  <div class="canvas">
+    <div class="flow narrow">
+      <div class="node ext"><b>Any trigger fires</b><small>PHONE_STATE → IDLE (short delay so the CallLog commits) · BOOT_COMPLETED · MY_PACKAGE_REPLACED · app open · CallLog content-URI change · hourly</small></div>
+      <div class="node"><b>SweepScheduler</b><small>Unique work, so overlapping triggers collapse into one sweep</small></div>
+      <div class="node"><b>Read sweep_state</b><small>Last CallLog <code>_ID</code> + <code>DATE</code>. First run backfills 7 days; <code>not_before</code> keeps that floor.</small></div>
+      <div class="node"><b>Read next page of 200 CallLog rows</b><small>Type: INCOMING / OUTGOING / MISSED / REJECTED (BLOCKED, VOICEMAIL handled). SIM from <code>PHONE_ACCOUNT_ID</code>. End = start + duration.</small></div>
+      <div class="node"><b>Normalise + classify + upsert</b><small>E.164 via libphonenumber; dedupe on CallLog id + date</small></div>
+      <div class="node store"><b>One transaction per page</b><small>calls upserted · BUSINESS calls reconciled into the outbox · watermark advanced</small></div>
+      <div class="node dec"><b>More rows past the watermark?</b><small>yes → next page · no → finish</small></div>
+      <div class="row" style="--n:2">
+        <div class="node"><b>Re-arm CallLog observer</b><small><code>CallLogChangedWorker</code> content-URI trigger</small></div>
+        <div class="node net"><b>CrmLookupScheduler.resolveAfterSweep</b><small>Then post-call prompts (section 5)</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="classify">
+  <div class="eyebrow">04 · Classification</div>
+  <h2>Ask once per number</h2>
+  <p>The app decides locally. The CRM never decides whether a call is Professional. Every answer the user gives is saved as a rule for that number, so the same number is never asked again.</p>
+  <div class="canvas">
+    <div class="flow">
+      <div class="node" style="max-width:520px;margin-inline:auto;width:100%"><b>New call in Room</b><small>GatherClassificationSignals collects: number rule, work-SIM, cached CRM link</small></div>
+      <div class="node dec" style="max-width:520px;margin-inline:auto;width:100%"><b>Was this call classified by hand?</b><small>USER_MANUAL always wins; rules never override it</small></div>
+      <div class="node dec" style="max-width:520px;margin-inline:auto;width:100%"><b>Does the number have a saved answer (rule)?</b></div>
+      <div class="branches" style="--n:3">
+        <div class="br"><div class="lbl">Rule = Professional</div><div class="node biz"><b>BUSINESS</b><small>source: rule</small></div></div>
+        <div class="br"><div class="lbl">No rule</div>
+          <div class="node dec"><b>Call on the work SIM?</b></div>
+          <div class="node biz"><b>yes → BUSINESS</b><small>source: work SIM</small></div>
+          <div class="node unc"><b>no → UNCLASSIFIED</b><small>prompt after the call</small></div></div>
+        <div class="br"><div class="lbl">Rule = Personal</div><div class="node per"><b>PERSONAL</b><small>source: rule</small></div></div>
+      </div>
+      <div class="node unc" style="max-width:640px;margin-inline:auto;width:100%"><b>Post-call notification (PostCallPromptPolicy)</b><small>Incoming/outgoing only, ended &lt; 1 h ago, at most 3 showing (newest kept). Buttons: Professional → <code>PostCallActivity</code> (mark + log form + Create lead) · Personal.</small></div>
+      <div class="node" style="max-width:640px;margin-inline:auto;width:100%"><b>Save the answer as a number rule → CallReclassifier</b><small>Re-labels this number's other calls (except USER_MANUAL) and calls <code>SyncGate.reconcile()</code> inside the same transaction: add to or remove from the outbox.</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="crm">
+  <div class="eyebrow">05 · CRM lookup &amp; lead</div>
+  <h2>Link Professional numbers to a lead or contact</h2>
+  <p>Only after a number is Professional does the app ask the CRM about it, and it sends just the E.164 number.</p>
+  <div class="canvas">
+    <div class="flow narrow">
+      <div class="node net"><b>CrmLookupWorker → ResolveCrmMatchesUseCase</b><small>BUSINESS numbers from the last 7 days with no cache, a cache older than 24 h, or a cache older than the newest call. Up to 50 per run.</small></div>
+      <div class="node net ext"><b>GET /api/v1/contacts/lookup?phone=+91…</b></div>
+      <div class="node dec"><b>Found in CRM?</b></div>
+      <div class="branches" style="--n:2">
+        <div class="br"><div class="lbl">Found</div><div class="node biz"><b>Cache the lead / contact id</b><small>crm_cache row, used to link activities</small></div></div>
+        <div class="br"><div class="lbl">Not found</div>
+          <div class="node dec"><b>Auto-create leads on? (default yes)</b></div>
+          <div class="node net"><b>yes → POST /leads</b><small>Phonebook name, Idempotency-Key</small></div>
+          <div class="node"><b>no → offer "Create lead"</b><small>in the log form / call detail</small></div></div>
+      </div>
+      <div class="node"><b>ReclassifyNumberUseCase</b><small>Link changed on an uploaded call? Re-send it with a bumped <code>updatedAt</code> so the CRM gets the new link.</small></div>
+      <div class="node unc"><b>Then post the post-call prompts</b><small>Lookup runs with no network constraint, so prompts aren't delayed offline. Failures go to <code>crm-lookup-retry</code> (network-bound, backoff).</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="sync">
+  <div class="eyebrow">06 · Upload</div>
+  <h2>Outbox pattern, offline first</h2>
+  <p>A Professional call is saved locally first and queued. Upload happens whenever there is a connection, with retries and per-item results.</p>
+  <div class="canvas">
+    <div class="flow">
+      <div class="pipe">
+        <div class="node biz"><b>SyncGate.reconcile()</b><small>The only caller of <code>OutboxRepository.enqueue</code></small></div>
+        <div class="arr" aria-hidden="true"></div>
+        <div class="node store"><b>outbox row</b><small>clientId (UUID), status PENDING, generation +1</small></div>
+        <div class="arr" aria-hidden="true"></div>
+        <div class="node"><b>SyncRequester</b><small>5 s debounce, unique work, CONNECTED, exponential backoff</small></div>
+      </div>
+      <div class="node"><b>SyncWorker → UploadPendingActivitiesUseCase</b><small>Reset stale IN_FLIGHT → PENDING · claim ≤100 · re-check each is still BUSINESS · build <code>ActivityPayload</code> (contract fields only)</small></div>
+      <div class="node net ext"><b>POST /api/v1/activities/batch</b><small>Bearer token · each item carries its clientId as idempotency key</small></div>
+      <div class="node dec"><b>Per-item result (generation-guarded update)</b><small>An item is marked only if the generation sent is still current, so edits made during upload are never lost</small></div>
+      <div class="branches" style="--n:4">
+        <div class="br"><div class="lbl">Created · Duplicate · Updated</div><div class="node biz"><b>SYNCED</b><small>server id stored</small></div></div>
+        <div class="br"><div class="lbl">409 Conflict</div><div class="node biz"><b>Server id wins</b><small>notes merged by last-write time</small></div></div>
+        <div class="br"><div class="lbl">5xx · IO · Error</div><div class="node unc"><b>FAILED_RETRYABLE</b><small>WorkManager backoff</small></div></div>
+        <div class="br"><div class="lbl">4xx · Invalid</div><div class="node per"><b>FAILED_PERMANENT</b><small>shown in Upload queue</small></div></div>
+      </div>
+      <div class="node"><b>Stale CRM link ("leadId does not exist")</b><small>Healed, not failed: forget cache → reclassify number → re-queue if still BUSINESS → immediate CRM lookup to re-link.</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="states">
+  <div class="eyebrow">07 · Outbox states</div>
+  <h2>Life of one outbox item</h2>
+  <div class="canvas">
+    <div class="states">
+      <div class="state">PENDING</div>
+      <div class="state" style="border-color:var(--net)">IN_FLIGHT</div>
+      <div class="state biz">SYNCED</div>
+      <div class="state unc">FAILED_RETRYABLE</div>
+      <div class="state per">FAILED_PERMANENT</div>
+    </div>
+    <div class="transitions">
+      <div><span class="mono">PENDING → IN_FLIGHT</span><span>SyncWorker claims the item for a batch</span></div>
+      <div><span class="mono">IN_FLIGHT → SYNCED</span><span>Server says CREATED / DUPLICATE / UPDATED / resolved CONFLICT, and the generation still matches</span></div>
+      <div><span class="mono">IN_FLIGHT → FAILED_RETRYABLE</span><span>5xx, timeout, no network; retried with exponential backoff</span></div>
+      <div><span class="mono">IN_FLIGHT → FAILED_PERMANENT</span><span>4xx validation; the user sees it and can retry by hand</span></div>
+      <div><span class="mono">IN_FLIGHT → PENDING</span><span>Worker crashed (reset on next start), or the call was edited during upload (generation bumped)</span></div>
+      <div><span class="mono">SYNCED → PENDING</span><span>Notes added later or CRM link changed; same clientId, new generation</span></div>
+      <div><span class="mono">any → removed</span><span>Reclassified Professional → Personal before upload</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="ui">
+  <div class="eyebrow">08 · Screens</div>
+  <h2>What the user sees</h2>
+  <p>A single activity with fragments pushed by <code>AppNavigator</code>. Every screen observes Room through a ViewModel <code>StateFlow</code>.</p>
+  <div class="canvas">
+    <div class="flow">
+      <div class="node" style="max-width:520px;margin-inline:auto;width:100%"><b>MainActivity</b><small>Permissions (CallLog, phone state, notifications), battery guidance, triggers a sweep on open</small></div>
+      <div class="row" style="--n:4">
+        <div class="node"><b>Calls</b><small>Paged list from Room, filters in SQL, colour pills per class</small></div>
+        <div class="node"><b>Upload queue</b><small>Outbox status, retry failed items</small></div>
+        <div class="node"><b>Number rules</b><small>Saved answers per number, change or delete</small></div>
+        <div class="node"><b>Settings</b><small>Work SIM, auto-create leads, battery / OEM guide</small></div>
+      </div>
+      <div class="row" style="--n:2">
+        <div class="node"><b>Call detail</b><small>Classify dialog, log form (outcome, notes, follow-up), Create lead dialog</small></div>
+        <div class="node unc"><b>PostCallActivity</b><small>Opened from the notification's Professional button</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="privacy">
+  <div class="eyebrow">09 · Privacy rules</div>
+  <h2>Guarantees the code enforces</h2>
+  <div class="rules">
+    <div class="rule"><b>One gate to the network</b><p>Only <code>SyncGate.reconcile()</code> can enqueue, and it only accepts BUSINESS calls.</p></div>
+    <div class="rule"><b>No lookups for private numbers</b><p>Personal and unsorted numbers are never sent to the CRM, not even as a lookup.</p></div>
+    <div class="rule"><b>Encrypted at rest</b><p>Room uses SQLCipher with a Keystore-wrapped passphrase; backups and data extraction are off.</p></div>
+    <div class="rule"><b>Clean logs</b><p>Counts, HTTP codes and exception types only. Numbers and notes are masked; <code>LogHygieneTest</code> checks it.</p></div>
+    <div class="rule"><b>Your choice wins</b><p>A call classified by hand (USER_MANUAL) is never changed by a rule.</p></div>
+    <div class="rule"><b>Undo before upload</b><p>Switching a call to Personal before it uploads removes its outbox item.</p></div>
+  </div>
+</section>
+</div>

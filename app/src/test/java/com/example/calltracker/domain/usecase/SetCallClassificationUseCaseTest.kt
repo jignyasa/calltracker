@@ -104,7 +104,7 @@ class SetCallClassificationUseCaseTest {
 
         // The next call from the number, through the same rule engine the sweep uses.
         val next = repos.addCall(2)
-        val decision = ClassifyCallUseCase()(GatherClassificationSignals(repos, repos)(next.normalizedNumber, null, null))
+        val decision = ClassifyCallUseCase()(GatherClassificationSignals(repos, repos)(next.rawNumber, next.normalizedNumber, null, null))
 
         assertEquals(Classification.PERSONAL, decision.classification)
         assertEquals(ClassificationSource.USER_RULE, decision.source)

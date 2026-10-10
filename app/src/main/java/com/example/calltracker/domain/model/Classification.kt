@@ -21,6 +21,9 @@ enum class ClassificationSource {
     /** No longer produced: saved phone contacts are asked once. Old rows are turned into rules by MIGRATION_2_3. */
     DEVICE_CONTACT,
     NONE,
+
+    /** A short code or service number (198, 121…): it has no +91 form, so it can't be remembered or sent. Kept personal. */
+    SERVICE_NUMBER,
 }
 
 /** Inputs to [com.example.calltracker.domain.usecase.ClassifyCallUseCase]. */
@@ -31,6 +34,8 @@ data class ClassificationSignals(
     val crmMatch: CrmMatch? = null,
     /** The call used the SIM the user marked as their work SIM. */
     val isOnWorkSim: Boolean = false,
+    /** The caller's number is shown but isn't a full phone number (a short code such as 198). */
+    val isServiceNumber: Boolean = false,
 )
 
 data class ClassificationDecision(

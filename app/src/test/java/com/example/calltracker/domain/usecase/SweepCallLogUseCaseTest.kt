@@ -90,6 +90,23 @@ class SweepCallLogUseCaseTest {
     }
 
     @Test
+    fun `a short code is kept personal and never asked, a hidden caller is still asked`() = runTest {
+        // Found on a device: 198 (carrier care) has no +91 form, so no answer could be saved and it was asked every call.
+        repos.setWorkSimSlot(0)
+        callLog.add(id = 1, startedAt = now - minute, number = "198", simSlot = 0)
+        callLog.add(id = 2, startedAt = now - minute, number = "-2")
+
+        sweep()
+
+        val (shortCode, hidden) = repos.allCalls
+        assertNull(shortCode.normalizedNumber)
+        assertEquals(Classification.PERSONAL, shortCode.classification)
+        assertEquals(ClassificationSource.SERVICE_NUMBER, shortCode.classificationSource)
+        assertEquals(Classification.UNCLASSIFIED, hidden.classification)
+        assertTrue("a service number never reaches the outbox", repos.outbox.isEmpty())
+    }
+
+    @Test
     fun `calls from a business-rule number are queued immediately`() = runTest {
         repos.setRule("+919876543210", Classification.BUSINESS, now)
         callLog.add(id = 1, startedAt = now - minute, number = "9876543210", cachedName = "Saved as contact")

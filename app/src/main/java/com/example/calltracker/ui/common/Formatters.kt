@@ -81,6 +81,7 @@ object Formatters {
         ClassificationSource.WORK_SIM -> R.string.source_work_sim
         ClassificationSource.DEVICE_CONTACT -> R.string.source_device_contact
         ClassificationSource.NONE -> R.string.source_none
+        ClassificationSource.SERVICE_NUMBER -> R.string.source_service_number
     }
 
     @StringRes

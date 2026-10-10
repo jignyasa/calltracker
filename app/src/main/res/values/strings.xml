@@ -33,6 +33,7 @@
     <string name="source_work_sim">Work SIM</string>
     <string name="source_device_contact">Saved contact</string>
     <string name="source_none">Not decided yet</string>
+    <string name="source_service_number">Service number, kept on this phone</string>
 
     <string name="sync_not_queued">Not uploaded (stays on this phone)</string>
     <string name="sync_pending">Waiting to upload</string>
