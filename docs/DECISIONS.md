@@ -6,7 +6,7 @@
 user should be bothered as little as possible. (The UI says "Professional"; the code and the CRM say BUSINESS.)
 
 **Approach: classify first, ask once per number, remember the answer; the CRM only for professional calls.**
-This follows the product owner's call flow (2026-10-10; see [FLOW_REVIEW.md](FLOW_REVIEW.md)).
+This follows the product owner's call flow (2026-10-10).
 
 | Order | Signal | Result | Why |
 |---|---|---|---|

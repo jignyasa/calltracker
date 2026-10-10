@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
-Android take-home (spec: `docs/assignment.pdf`). Real-time call activity capture → CRM logging,
+Android take-home (the spec PDF is no longer in the repo; it is in git history). Real-time call activity capture → CRM logging,
 with strict privacy (personal calls never leave the device) and reliable offline-first sync.
 Build: AGP 9.2.1 with **built-in Kotlin** (no `kotlin-android` plugin applied in `:app`; the root applies it with
 `apply false` only to pin KGP 2.4.21), KSP for Hilt/Room codegen, compileSdk 37, targetSdk 36, minSdk 26, Java 17.
@@ -24,7 +24,7 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
     Dialogs that return data are `DialogFragment`s + Fragment Result API (survive rotation). Forms keep their draft in the
     ViewModel and refill fields only when `formVersion` changes, so the user's typing is never overwritten.
     ViewModels depend on interfaces (e.g. `SweepRequester`, `SimCardSource`), never on Android classes, so they test on the JVM.
-    Look and feel follows `docs/images/design-mockup.png`: colours only as tokens in `values/` + `values-night/colors.xml`,
+    Look and feel follows the user's design mockup (in git history, `docs/images/design-mockup.png`): colours only as tokens in `values/` + `values-night/colors.xml`,
     avatars/pills via `ui/common/CallVisuals`, full-screen dialogs extend `ui/common/FullScreenDialogFragment`.
     UI text says "Professional" for `Classification.BUSINESS` (code, outbox and CRM keep BUSINESS).
   - `domain/`: pure Kotlin. Models, repository **interfaces**, use cases. No `android.*` imports.
@@ -51,7 +51,7 @@ Release APKs for delivery live in `dist/` (rebuild with `assembleRelease`, with 
    All of them only call `SweepScheduler`. The logic lives in `domain/usecase/SweepCallLogUseCase` (pages of 200, one transaction per page).
 4. First sweep backfills **7 days** (`sweep_state.not_before` keeps that floor for every later sweep). Saved phone contacts
    (`CACHED_NAME`) are **not** auto-Personal: like any number with no saved answer, they're asked once.
-5. **Classify first, CRM only for professional calls** (the product owner's call flow; see `docs/FLOW_REVIEW.md`). The sweep
+5. **Classify first, CRM only for professional calls** (the product owner's call flow). The sweep
    classifies from local signals (`GatherClassificationSignals`: the number's saved answer = rule, work SIM; the *cached* CRM record
    only links). Every user answer is saved as a number rule (`applyToNumber = true` everywhere; "Remember for this number" ticked),
    so a number is asked once. Then `CrmLookupScheduler.resolveAfterSweep` runs `CrmLookupWorker` →

@@ -1,7 +1,8 @@
 # Implementation notes
 
 This file records what was built in each phase, why it works the way it does, and how it was checked.
-Spec: `docs/assignment.pdf` · Plan: `docs/PLAN.md` · Rules: `CLAUDE.md` · Phase 0–3 device test: `docs/TEST_REPORT_PHASE3.md`.
+Plan: `docs/PLAN.md` · Rules: `CLAUDE.md`. The assignment spec, the Phase 0–3 device test report and the flow/design
+review (`FLOW_REVIEW.md`) were kept in the repo until 2026-10-10 and are in its git history.
 
 ---
 
@@ -376,7 +377,7 @@ A check against the spec's "search the number when a call completes, link it, or
 ---
 
 ## Look and feel redesign (2026-10-10)
-After the user's 10-screen mockup (comparison table: [FLOW_REVIEW.md](FLOW_REVIEW.md#design-mockup-vs-the-app)).
+After the user's 10-screen mockup (comparison table in `FLOW_REVIEW.md`, now in git history only).
 - **Theme:** blue app bar drawn behind the status bar, with light status icons. Colour tokens are in
   `values/colors.xml` and `values-night/colors.xml` (one DayNight theme). There are styles for 10dp buttons, 8dp fields,
   12dp cards, segmented tabs and pills. Lift-on-scroll is off so the bar stays blue.
@@ -399,8 +400,8 @@ After the user's 10-screen mockup (comparison table: [FLOW_REVIEW.md](FLOW_REVIE
 ---
 
 ## Assignment §2 and §3 follow-up (2026-10-10)
-A review of spec §2 (CRM matching) and §3 (professional vs personal) against the app. The full table is in
-[FLOW_REVIEW.md](FLOW_REVIEW.md#assignment-2-and-3-review-2026-10-10).
+A review of spec §2 (CRM matching) and §3 (professional vs personal) against the app. The full table was in
+`FLOW_REVIEW.md` (now in git history only).
 - **F1, prompt cap:** `CrmLookupWorker.promptForUndecided` now keeps at most `MAX_PROMPTS` (3) "Work call?" prompts
   *showing*, across runs; the newest calls keep theirs and an older prompt is cancelled. Prompts carry an extra so
   `PostCallNotifier.shownPromptCallIds` can tell them apart from "Add notes" notifications, which share the tag.
@@ -424,8 +425,7 @@ A review of spec §2 (CRM matching) and §3 (professional vs personal) against t
 ---
 
 ## Product owner's call flow: classify first (2026-10-10)
-The product owner's 8-step flow, implemented (comparison table in
-[FLOW_REVIEW.md](FLOW_REVIEW.md#call-flow-from-the-product-owner-2026-10-10-implemented)).
+The product owner's 8-step flow, implemented (comparison table in `FLOW_REVIEW.md`, now in git history only).
 - **Classification first** (`ClassifyCallUseCase`): the number's saved answer (rule) → work SIM → Unsorted. The CRM match
   and saved phone contacts no longer decide (`ClassificationSignals.isDeviceContact` removed; `crmMatch` only links).
 - **Asked once per number:** every answer is saved as a rule. The notification's Personal (`PostCallActionReceiver`) and

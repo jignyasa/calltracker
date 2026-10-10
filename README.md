@@ -10,7 +10,6 @@ and uploads them to the CRM reliably, even on bad networks, across reboots and o
 | How it's built | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Why it's built that way, assumptions, limitations, what's next | [docs/DECISIONS.md](docs/DECISIONS.md) |
 | How it's tested (and what was verified on a real phone) | [docs/TESTING.md](docs/TESTING.md) |
-| The product owner's call flow, the flowchart and the design mockup, compared with the app | [docs/FLOW_REVIEW.md](docs/FLOW_REVIEW.md) |
 | Phase-by-phase build log | [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md) · [docs/PLAN.md](docs/PLAN.md) |
 | The CRM API contract (mock server) | [mock-server/README.md](mock-server/README.md) |
 
@@ -115,7 +114,7 @@ Details, the device test plan and results: [docs/TESTING.md](docs/TESTING.md).
 | APK | [`dist/`](#prebuilt-apks-dist) |
 | README explaining setup | this file |
 | Architecture overview | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Design decisions and trade-offs (incl. the professional-vs-personal reasoning) | [docs/DECISIONS.md](docs/DECISIONS.md) §1–5 · [docs/FLOW_REVIEW.md](docs/FLOW_REVIEW.md) |
+| Design decisions and trade-offs (incl. the professional-vs-personal reasoning) | [docs/DECISIONS.md](docs/DECISIONS.md) §1–5 |
 | Assumptions | [docs/DECISIONS.md](docs/DECISIONS.md) §6 |
 | Testing approach | [docs/TESTING.md](docs/TESTING.md) |
 | Known limitations | [docs/DECISIONS.md](docs/DECISIONS.md) §7 |
@@ -125,4 +124,4 @@ Details, the device test plan and results: [docs/TESTING.md](docs/TESTING.md).
 
 Kotlin · XML layouts + ViewBinding + Material 3 · MVVM + Clean Architecture · Hilt · Coroutines/Flow · Room +
 SQLCipher (Keystore-wrapped key) · Paging 3 · WorkManager · Retrofit + OkHttp + kotlinx.serialization · libphonenumber ·
- MockWebServer. Why each: [docs/DECISIONS.md](docs/DECISIONS.md).
+JUnit4, MockK/fakes, Turbine, Robolectric, MockWebServer. Why each: [docs/DECISIONS.md](docs/DECISIONS.md).

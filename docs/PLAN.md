@@ -1,6 +1,6 @@
 # CallTracker: Phase Plan
 
-Spec: `docs/assignment.pdf`. Project rules: `CLAUDE.md`.
+Spec: the take-home assignment (no longer in the repo; see git history). Project rules: `CLAUDE.md`.
 
 ## Business vs personal classification
 A layered rule engine that keeps user taps to a minimum:
