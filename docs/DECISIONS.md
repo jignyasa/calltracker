@@ -149,11 +149,18 @@ is linked), so no duplicate lead is made.
   their edit was overwritten.
 - **Release APKs here are debug-signed** (no keystore in the repo).
 - **targetSdk is 36**, compileSdk 37 — raising the target needs its own review.
+- **Short codes and service numbers** (198, 121…) are always Personal: they have no +91 form, so no answer can be saved
+  for them and they can't be sent to a CRM. One used for work has to be marked by hand on each call.
+- **Hidden or private callers are asked on every call**: with no number, the answer can't be remembered.
+- **The CRM runs on the tester's own computer**: a shared APK works only next to the mock server (emulator at
+  `10.0.2.2`, or a phone over USB with `adb reverse`); it has no CRM of its own on another network.
 
 ## 8. Future improvements
 
 - **Login and token refresh**, per-user CRM accounts, and server-pushed config (CRM URL, cache TTL).
-- **work with real CRM data
+- **Work with real CRM data**: connect to the company's CRM instead of the mock server.
+- **Host the CRM online** over HTTPS, so a shared APK works on any phone without a laptop or USB cable.
+- **Remember answers for short codes** by keying them on the raw number, so a service number used for work is asked once.
 - **Persist the log-form draft** across process death (today it survives rotation only).
 - **Search** in the call list; per-day summaries for the rep.
 - **Tell the rep when a CRM conflict replaced their edit**, with the overwritten text to copy back.
