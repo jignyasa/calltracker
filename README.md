@@ -81,16 +81,59 @@ the CRM gets a lead created automatically), add notes, and watch it arrive at
 `GET http://localhost:3000/api/v1/activities` (needs `Authorization: Bearer dev-token`). Answer **Personal** and that
 number is never asked about again and never sent.
 
-## Prebuilt APKs (`dist/`)
+## How to install the app (prebuilt APK, no build needed)
 
-| File | Use with |
-|---|---|
-| `CallTracker-1.0-emulator.apk` | An emulator; mock CRM on the host at `10.0.2.2:3000` |
-| `CallTracker-1.0-device.apk` | A phone over USB with `adb reverse tcp:3000 tcp:3000` |
+Two ready-made APKs are in `dist/`:
 
-Both are **release builds** (R8-shrunk, no debug tooling) signed with the Android debug key — install with
-`adb install dist/<file>.apk`. To sign with a real key, set `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias`
-and `releaseKeyPassword` as Gradle properties (e.g. in `~/.gradle/gradle.properties`) and run `assembleRelease`.
+| File | Use with | CRM address inside the app |
+|---|---|---|
+| `CallTracker-1.0-device.apk` | A real phone connected by USB | `http://localhost:3000/` |
+| `CallTracker-1.0-emulator.apk` | An Android emulator | `http://10.0.2.2:3000/` |
+
+The app talks to the mock CRM running on your computer, so the computer and the phone must stay connected.
+
+**Step 1. Start the mock CRM** (in its own terminal, and leave it running):
+```bash
+cd mock-server
+npm install          # first time only
+npm start            # "Mock CRM listening on http://0.0.0.0:3000"
+```
+Check it in a browser: `http://localhost:3000/health` shows `{"ok":true}`.
+
+**Step 2. Connect the phone** (skip for the emulator):
+1. On the phone, turn on **Developer options → USB debugging**.
+2. Connect it by USB and tap **Allow** on the "Allow USB debugging?" prompt.
+3. Check it's seen: `adb devices` lists the phone as `device`.
+
+If `adb` is "not found", use the copy in the Android SDK. Windows (PowerShell):
+`& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices` (or add that `platform-tools` folder to your PATH).
+
+**Step 3. Let the phone reach the CRM** (skip for the emulator; it reaches the computer at `10.0.2.2` by itself):
+```bash
+adb reverse tcp:3000 tcp:3000
+adb reverse --list   # shows: tcp:3000 tcp:3000
+```
+Run this again whenever you unplug the phone or restart adb.
+
+**Step 4. Install the APK:**
+```bash
+adb install -r dist/CallTracker-1.0-device.apk      # phone
+adb install -r dist/CallTracker-1.0-emulator.apk    # emulator
+```
+
+**Step 5. Open the app once and grant permissions** — see [First run](#4-first-run). Android sends no call events to an
+app that has never been opened.
+
+**Start again with empty CRM data (optional).** The mock CRM saves its data to `mock-server/data/db.json`, so a restart
+keeps it.
+- See what's stored: open `http://localhost:3000/__admin/state`.
+- Clear it while the server runs: `curl -X POST http://localhost:3000/__admin/reset` (PowerShell:
+  `Invoke-RestMethod -Method Post http://localhost:3000/__admin/reset`). Only the sample leads and contacts remain.
+- Clear the app too: `adb shell pm clear com.example.calltracker`, then open it again and grant the permissions.
+
+Both APKs are **release builds** (R8-shrunk, no debug tooling) signed with the Android debug key. To sign with a real
+key, set `releaseStoreFile`, `releaseStorePassword`, `releaseKeyAlias` and `releaseKeyPassword` as Gradle properties
+(e.g. in `~/.gradle/gradle.properties`) and run `assembleRelease`.
 
 ## Build, test, lint
 
@@ -111,7 +154,7 @@ Details, the device test plan and results: [docs/TESTING.md](docs/TESTING.md).
 |---|---|
 | Complete source code | `app/`, `mock-server/` |
 | Build instructions | [Quick start](#quick-start) · [Build, test, lint](#build-test-lint) |
-| APK | [`dist/`](#prebuilt-apks-dist) |
+| APK | [`dist/`](#how-to-install-the-app-prebuilt-apk-no-build-needed) |
 | README explaining setup | this file |
 | Architecture overview | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Design decisions and trade-offs (incl. the professional-vs-personal reasoning) | [docs/DECISIONS.md](docs/DECISIONS.md) §1–5 |
