@@ -1,171 +1,170 @@
-# Design decisions, trade-offs, assumptions, limitations
+# Decisions, trade-offs, assumptions and limitations
 
-## 1. Professional vs personal: how it's decided, and why
+This page explains, in plain words, the main choices made in Call Tracker and why.
+(The app shows "Professional"; inside the code and the CRM the same thing is called BUSINESS.)
 
-**Goal from the spec (§3):** personal calls must never be synced, professional calls should be ready to log, and the
-user should be bothered as little as possible. (The UI says "Professional"; the code and the CRM say BUSINESS.)
+## 1. Work call or personal call?
 
-**Approach: classify first, ask once per number, remember the answer; the CRM only for professional calls.**
+**The goal:** personal calls must never leave the phone, work calls should be easy to log, and the user should be
+asked as little as possible.
+
+**The rule: decide on the phone first, ask once per number, remember the answer. Only work calls go near the CRM.**
 This follows the product owner's call flow (2026-10-10).
 
-| Order | Signal | Result | Why |
+The app checks these in order:
+
+| Step | What the app looks at | Result | Why |
 |---|---|---|---|
-| 1 | The number's **saved answer** (a number rule) | that | Every Professional / Personal answer is saved for the number, so a number is asked about once, ever. |
-| 2 | The call used the **work SIM** (optional setting) | **Professional** | Very common in India: dual-SIM phones with one company SIM. |
-| 3 | Nothing, and it was a conversation (incoming or outgoing) | **Unsorted** → one "Work call?" notification right after the call | Asking once, in context, is cheaper than a form later. |
-| — | Nothing, and it was a missed or rejected call | **Unsorted**, no prompt | Nothing to log yet; it waits in the Unsorted tab. |
+| 1 | Has the user already answered for this number? | Use that answer | Every answer is saved, so each number is asked about only once. |
+| 2 | Was the call made on the work SIM? (optional setting) | Professional | Many phones in India have two SIMs, one of them from the company. |
+| 3 | Neither, and the people actually talked (incoming or outgoing) | Unsorted, plus one "Work call?" notification | Asking once, right after the call, is easier than filling a form later. |
+| — | Neither, and the call was missed or rejected | Unsorted, no notification | There's nothing to log yet; it waits in the Unsorted tab. |
 
-**Ways to answer (all one tap, all saved for the number):** the notification's **Professional** button (opens the log
-form for the call) or **Personal** (answered in place); tapping the notification (opens the call with the **Classify
-call** dialog); the Professional / Personal choice on the call's screen ("Remember for this number" is ticked; untick
-for this call only); the **Number rules** screen, which lists every saved number and lets the user change or delete
-one; the **work SIM** setting.
+**How the user can answer** (one tap each, and the answer is saved for the number):
+- the notification's **Professional** button (opens the log form) or **Personal** button;
+- tapping the notification (opens the call with the **Classify call** dialog);
+- the Professional / Personal choice on the call screen ("Remember for this number" is ticked; untick it to change
+  only this one call);
+- the **Number rules** screen, where saved answers can be changed or deleted;
+- the **work SIM** setting.
 
-**Then, for professional calls only: the CRM.** The number is searched in Leads and Contacts (`CrmLookupWorker`, also
-requested the moment a call becomes professional). Found → the call is linked and uploaded with the `leadId` /
-`contactId`. Not found → if **"Create leads automatically"** is on (default) and the phonebook has a name for the
-number, the lead is created with that name and linked; otherwise **Create lead** is offered (call screen and after-call
-form). Leads and Contacts are both checked first, and the server refuses a duplicate phone (409 → the existing record
-is linked), so no duplicate lead is made.
+**After that, for work calls only, the CRM is checked.** The app searches the number in Leads and Contacts.
+- **Found:** the call is linked to that lead or contact and uploaded.
+- **Not found:** if "Create leads automatically" is on (the default) and the phone's contacts have a name for the
+  number, a new lead is created with that name. Otherwise a **Create lead** button is shown.
+- The server refuses a second lead with the same number, so duplicates are not created.
 
-- **Default-deny.** Anything not positively Professional stays on the phone. A mistake can only ever cause a missed
-  upload (fixable with one tap), never a leaked personal call. `SyncGate.reconcile` is the only way into the outbox.
-- **Personal and unsorted numbers never reach the CRM**, not even as a lookup (`CallDao.numbersNeedingCrmLookup` lists
-  professional numbers only). A phonebook name is sent only to create a lead for a professional number, and only with
-  the setting on.
-- **A choice made by hand is never overridden**, not by a saved answer or the work SIM.
-- **Prompts are rare by construction:** only for numbers with no saved answer, only for conversations that ended in the
-  last hour (no flood after a reboot or the first 7-day import), never more than 3 showing at once (the newest calls
-  keep theirs), and the lock screen shows a generic text.
-- **Trade-offs.** (1) A CRM customer calling from a number the app hasn't seen is asked once ("Professional?") before
-  the CRM is searched; after that the number is remembered. (2) Assignment §2 says "when a call is completed, search
-  the number in CRM"; here that happens when a completed call is **professional**, so personal numbers never leave the
-  phone. (3) Saved phone contacts are asked once, because phonebooks hold customers too.
-- **Upgrading from v2** (the earlier "CRM search first" version): calls the CRM or a saved contact had decided keep
-  their classification; `MIGRATION_2_3` turns them into saved answers.
+**Safety rules**
+- **When in doubt, keep it on the phone.** Only calls marked Professional can be uploaded. A mistake can only mean a
+  work call wasn't uploaded yet (fixed with one tap), never a personal call leaking out.
+- **Personal and unsorted numbers are never sent to the CRM**, not even to search for them. A contact name is sent
+  only to create a lead for a work number, and only if the setting is on.
+- **A choice made by hand always wins.** A saved answer or the work SIM setting never changes it.
+- **Few notifications:** only for numbers with no saved answer, only for calls that ended in the last hour (so no flood
+  after a restart or the first import), never more than 3 at once, and the lock screen shows no details.
 
-## 2. Detection: CallLog is the source of truth
+**Trade-offs**
+1. A CRM customer calling from a new number is asked "Professional?" once before the CRM is searched. After that the
+   number is remembered.
+2. The assignment says "search the number in the CRM when a call ends". Here that happens only when the call is a work
+   call, so personal numbers never leave the phone.
+3. Numbers saved in the phone's contacts are still asked once, because contacts include customers too.
 
-- **The `PHONE_STATE` broadcast is only a trigger.** It carries no duration, type or SIM, arrives twice on some phones,
-  and OEM battery managers suppress it. The **CallLog** has everything and is written by the system for every call.
-- **Watermark sweep** (`_ID` and date, with a 2-minute overlap, plus a 7-day floor fixed at the first sweep): idempotent
-  (unique on CallLog id + start), crash-safe (one transaction per page of 200 advances the watermark with the data), and
-  it catches long calls written after shorter later ones, and new calls after the user wipes the log. The floor stops a
-  restored call-history backup from flooding the app (found on a device).
-- **Many triggers, one sweep:** PHONE_STATE idle, a WorkManager **content-URI trigger on the CallLog** (wakes the app
-  even when the broadcast never came), boot, app update, app open and an hourly safety net — all collapse into one unique
-  sweep.
-- **No call-recording, no accessibility service, no default-dialer role** — only standard, Play-policy-friendly APIs
-  (`READ_CALL_LOG`, `READ_PHONE_STATE`).
-- **Dual SIM:** the CallLog's `PHONE_ACCOUNT_ID` is mapped to a slot via the subscription id, the ICCID, and on Android
-  11+ Telecom's phone accounts — Samsung stores the ICCID, which apps can't read since Android 10 (found on a device).
+**Upgrading from the older version** (which searched the CRM first): calls already decided keep their answer; a
+database migration turns them into saved answers.
 
-## 3. Sync: outbox + idempotency + generations
+## 2. Finding calls: the phone's call history is the truth
 
-- **Outbox pattern.** Logging never waits for the network: the activity and its outbox row are written in the same
-  transaction as the classification. Uploads happen later, in the background.
-- **Idempotency:** each activity gets a UUID once, on the phone; it's the item's idempotency key on the server. A lost
-  response followed by a retry is answered `DUPLICATE` — verified by crashing the app mid-upload on a device.
-- **Generations:** every (re)queue bumps a counter; a result only marks an item done if the generation it was sent with
-  is still current. An edit made during an upload is therefore re-sent, never silently dropped.
-- **Per-item results, never all-or-nothing:** `CREATED/DUPLICATE/UPDATED` → synced; `CONFLICT` → last write wins on
-  `updatedAt` (the server's copy replaces the local one if newer); `INVALID` → permanent failure shown on the call with a
-  Retry button and under the Sync queue's Failed tab; `ERROR` → retried. Batch-level failures (no network, 5xx, 429, 401)
-  keep every item.
-- **Two fixes found on a device:** a CRM record deleted/merged on the server used to block a call forever (the link is
-  now dropped, the call re-checked, re-queued only if still professional, and the number looked up again at once, so a
-  record that moved to a new id re-links within one upload cycle); and a CRM copy stamped by a clock running ahead used
-  to swallow later edits (a save is now always stamped after the version it replaced).
-- **Sync status is one screen:** the Sync queue (Pending / Failed / Synced, offline banner, Upload now). The call list
-  only shows a "waiting to upload" banner that opens it, rather than repeating the same filter and button.
-- **Battery and network:** WorkManager with a network constraint and exponential backoff (30 s doubling), a 5 s debounce
-  so a burst of edits is one run, batches of ≤100, ≤1000 items per run, unique work everywhere, hourly safety net.
+- **The "phone state" signal is only a wake-up call.** It doesn't say how long the call was, its type or its SIM, it
+  can arrive twice, and some phones block it to save battery. The phone's **call history (CallLog)** has everything,
+  so the app always reads from there.
+- **It remembers where it stopped reading.** Each time, it reads only new calls (with a small 2-minute overlap) and
+  never goes back further than 7 days before install. Reading the same call twice is harmless, and a crash midway
+  loses nothing. The 7-day limit stops an old restored call history from flooding the app (seen on a real phone).
+- **Many triggers, one job:** the end of a call, a change in the call history, phone restart, app update, opening the
+  app, and an hourly safety check all start the same single read.
+- **No call recording, no accessibility tricks, no need to be the default phone app** — only normal permissions that
+  Google Play allows.
+- **Dual SIM:** the app works out which SIM was used in several ways, because Samsung phones store the SIM's ID in a
+  form apps can't read on newer Android (found on a real phone).
+
+## 3. Uploading to the CRM (sync)
+
+- **Save now, upload later.** Logging a call never waits for the internet. The call is put in a local upload queue
+  (the "outbox") at the same moment it's saved, and uploaded in the background.
+- **No duplicates.** Each call log gets a unique ID made on the phone. If an upload is sent twice (for example the
+  reply was lost), the server recognises it and doesn't create a second copy. Tested by crashing the app mid-upload.
+- **No lost edits.** Each time a call is changed, its queue entry gets a new version number. An upload only counts as
+  done if nothing changed while it was being sent; otherwise it is sent again.
+- **One bad item doesn't block the rest.** The server answers each item separately:
+  - saved / already there / updated → done;
+  - conflict → the newer copy wins (by time of last edit);
+  - invalid → marked failed, shown on the call with a Retry button and in the Sync queue's Failed tab;
+  - server error → tried again later.
+  If the whole request fails (no internet, server down), everything stays in the queue.
+- **Two problems found on a real phone and fixed:**
+  - If a CRM lead was deleted or merged, the call used to be stuck forever. Now the old link is dropped, the number
+    is searched again, and the call is re-sent with the new link.
+  - If the CRM's clock was ahead, later edits on the phone could be ignored. Now every save is always stamped later
+    than the version it replaces.
+- **One place to see upload status:** the Sync queue screen (Pending / Failed / Synced, offline banner, Upload now).
+- **Battery friendly:** uploads only run with internet, wait longer after each failure (30 s, then doubling), group
+  quick edits together, send up to 100 items at a time, and an hourly check catches anything missed.
 
 ## 4. Storage and security
 
-- **Room as the single source of truth** — the UI only observes the database, so offline and online look the same.
-- **SQLCipher** with a random 256-bit key wrapped by a non-exportable **Android Keystore** key (raw key, no PBKDF2 → fast
-  open on cheap phones). Call history is sensitive; a lost/stolen unlocked phone shouldn't expose it via file access.
-- **No backups** of the database (`allowBackup=false`, excluded from device transfer); on Keystore loss the DB is
-  recreated and re-read from the CallLog — data loss is limited to notes not yet uploaded.
-- **Logs** carry no numbers, names or notes (enforced by a test); release builds strip info logging; the debug HTTP log
-  redacts the phone parameter.
+- **The local database is the one source of truth.** Screens only show what's in the database, so the app looks the
+  same online and offline.
+- **The database is encrypted** (SQLCipher). Its key is random and is locked by the phone's secure key store (Android
+  Keystore), so it can't be copied out. Call history is private data.
+- **No backups of the database.** If the key is ever lost, the database is rebuilt from the phone's call history; only
+  notes that weren't uploaded yet are lost.
 
-## 5. Tech choices
 
-| Choice | Why | Alternative considered |
+## 5. Technology choices
+
+| Choice | Why | Other option |
 |---|---|---|
-| Kotlin, single module | Fast to build and navigate for this size; package boundaries enforce the layers | Multi-module: worth it for a team, overhead here |
-| XML views + Material 3 | Mature on low-end devices; smaller APK and lower memory than a Compose runtime for a forms-and-lists app | Compose |
-| MVVM + Clean Architecture | Business rules (privacy, sync) in pure Kotlin → fast, exhaustive JVM tests; Android only at the edges | — |
-| Hilt | Standard DI on Android with first-class WorkManager/ViewModel support | Manual DI / Koin |
-| Room + SQLCipher | Typed queries, migrations, Flow + Paging integration; encryption at rest | SQLDelight |
-| WorkManager | Survives process death and reboots, respects Doze, has network constraints and backoff — exactly the sync model | Foreground service (battery, notification, Play policy) |
-| Retrofit + OkHttp + kotlinx.serialization | De-facto standard; no reflection-heavy JSON | Ktor |
-| Paging 3 | Thousands of calls without loading them all; filters in SQL | Manual limits |
-| libphonenumber | Correct E.164 normalisation for every Indian format (`0…`, `+91 …`, spaces) — matching depends on it | Regex |
-| Node/Express mock CRM | A real HTTP contract with idempotency, per-item results and fault injection to test against | Hard-coded fakes |
-| No navigation library | About ten screens and dialogs in one activity with a side menu; plain fragment transactions and the Fragment Result API are simpler | Navigation component |
-| Material 3 with the app's own colour tokens | One DayNight theme; every colour is a token in `values/` + `values-night/`, so dark mode costs nothing per screen; shared avatars and pills (`CallVisuals`) keep screens consistent | Per-screen colours |
+| Kotlin, one module | Simple to build and find things at this size | Many modules: useful for a big team |
+| XML screens + Material 3 | Runs well on cheap phones; smaller app | Jetpack Compose |
+| MVVM + Clean Architecture | The important rules (privacy, sync) are plain Kotlin, so they're easy to test | — |
+| Hilt | Standard Android dependency injection, works with background jobs and ViewModels | Koin / by hand |
+| Room + SQLCipher | Safe, typed database with upgrades and encryption | SQLDelight |
+| WorkManager | Background jobs that survive restarts, wait for internet and retry | A foreground service (uses more battery) |
+| Retrofit + OkHttp + kotlinx.serialization | The common, well-known way to call an API | Ktor |
+| Paging 3 | Shows thousands of calls without loading them all at once | Manual limits |
+| libphonenumber | Correctly turns every Indian number format into one standard form, so matching works | Hand-written rules |
+| Node/Express mock CRM | A real server to test against, including failures and duplicates | Fake code only |
+| No navigation library | About ten screens in one activity; plain fragment switching is simpler | Navigation component |
+| Shared colour tokens | Dark mode works on every screen for free; screens look consistent | Colours per screen |
 
 ## 6. Assumptions
 
-- The CRM API looks like the mock's contract (`mock-server/README.md`): phone lookup, idempotent lead creation, and a
-  batch activity endpoint with per-item results, `clientId` as the idempotency key and `updatedAt` for conflicts.
-- Phone numbers are Indian by default (`IN` region); other countries work when stored with a country code.
-- A rep uses one CRM account per phone; authentication is a static bearer token here (a real app would have a login and
-  token refresh).
-- **The product owner's call flow is the product decision** (2026-10-10): classify first, ask once per number, search
-  the CRM only for professional calls. Where it departs from the assignment's "search on every completed call", the flow
-  wins, so personal numbers never reach the CRM.
-- **One number, one relationship:** an answer is saved for the number and applies to its later calls. A per-call answer
-  is still possible (untick "Remember for this number").
-- **A saved phonebook name is good enough as a lead name**; the rep can rename the lead in the CRM.
-- Calls older than 7 days at install time are not wanted.
-- A follow-up is a date (no time); stored as the local start of that day.
-- The user grants call-log and phone permissions — without them the app can't work, and says so.
+- The real CRM works like the mock server (see `mock-server/README.md`): search by phone, create lead safely,
+  upload calls in batches with a result per call.
+- Numbers are Indian by default; numbers from other countries work if saved with the country code.
+- One CRM account per phone, with a fixed token (a real app would need login).
+- **The product owner's call flow is the final word** (2026-10-10): decide first, ask once per number, CRM only for
+  work calls. Where it differs from the assignment, the flow wins, to protect privacy.
+- One number usually means one relationship (work or personal). A single call can still be set differently.
+- A name from the phone's contacts is good enough for a new lead; it can be renamed in the CRM.
+- Calls older than 7 days before install are not needed.
+- A follow-up has a date but no time.
+- The user gives call history and phone permissions; without them the app can't work and says so.
 
 ## 7. Known limitations
 
-- **Phone-maker battery screens** were verified on Samsung only; the others use known component names with a fallback to
-  the app's info page. Some OEMs can still kill background work despite all settings.
-- **Real incoming calls** were not tested on a device (no second phone); incoming/missed/rejected were verified with
-  CallLog rows written by the debug tool, which is exactly what the app reads.
-- **An activity already uploaded can't be deleted from the CRM** by the app; marking it personal stops further updates
-  and the UI warns about it.
-- **Unsaved notes are lost** if Android kills the app in the background before Save (they survive rotation).
-- **Database key creation and opening run on the main thread** on first use — a few tens of milliseconds on low-end
-  phones.
-- **Calls imported before the dual-SIM fix** keep an empty SIM slot; changing the work SIM re-checks only the last 7 days.
-- **A CRM customer calling from a number the app hasn't classified is asked once** ("Work call?") before the CRM is
-  searched, because the CRM is only searched for professional calls. After that answer the number is remembered.
-- **A CRM record created on the server side** is noticed on the professional number's next call, or within 24 h if it
-  doesn't call again; creating the lead in the app is immediate. Either way, calls already uploaded are re-sent with the
-  new link.
+- **Battery settings screens** were tested on Samsung only. Other brands use known settings pages with a fallback.
+  Some phone brands may still stop background work.
+- **A call already uploaded can't be deleted from the CRM** by the app. Marking it personal stops further updates, and
+  the app warns about this.
+- **Unsaved notes are lost** if Android closes the app in the background before Save (they do survive rotating the
+  screen).
+- **The database key is made on the main thread** the first time — a few hundredths of a second on slow phones.
+- **Calls imported before the dual-SIM fix** have no SIM shown; changing the work SIM only re-checks the last 7 days.
+- **A new number from a CRM customer is asked about once**, because the CRM is searched only for work calls.
 - **A number that is both work and personal** (a friend who is also a customer) follows its saved answer; a single
-  call has to be changed by hand with "Remember for this number" unticked.
-- **Auto-created leads carry only the phonebook name and the number**; the company stays empty until someone fills it in.
-- **A newer CRM copy replaces a local edit silently** (last write wins, as the contract says); the rep isn't told that
-  their edit was overwritten.
-- **Release APKs here are debug-signed** (no keystore in the repo).
-- **targetSdk is 36**, compileSdk 37 — raising the target needs its own review.
-- **Short codes and service numbers** (198, 121…) are always Personal: they have no +91 form, so no answer can be saved
-  for them and they can't be sent to a CRM. One used for work has to be marked by hand on each call.
-- **Hidden or private callers are asked on every call**: with no number, the answer can't be remembered.
-- **The CRM runs on the tester's own computer**: a shared APK works only next to the mock server (emulator at
-  `10.0.2.2`, or a phone over USB with `adb reverse`); it has no CRM of its own on another network.
+  call must be changed by hand.
+- **Auto-created leads have only a name and number**; someone has to add the company.
+- **When the CRM's newer copy wins a conflict, the user isn't told** their edit was replaced.
+- **The APKs here are signed with the debug key** (no release key is stored in the repo).
+- **targetSdk is 36** (compileSdk 37); raising it needs its own review.
+- **Short codes and service numbers** (198, 121…) are always Personal: they have no full +91 form, so no answer can be
+  saved for them and they can't go to the CRM. If one is used for work, each call must be marked by hand.
+- **Hidden / private callers are asked every time**, because there's no number to remember the answer for.
+- **The mock CRM runs on the tester's computer.** A shared APK only works next to it (emulator, or a phone connected by
+  USB with `adb reverse`).
 
 ## 8. Future improvements
 
-- **Login and token refresh**, per-user CRM accounts, and server-pushed config (CRM URL, cache TTL).
-- **Work with real CRM data**: connect to the company's CRM instead of the mock server.
-- **Host the CRM online** over HTTPS, so a shared APK works on any phone without a laptop or USB cable.
-- **Remember answers for short codes** by keying them on the raw number, so a service number used for work is asked once.
-- **Persist the log-form draft** across process death (today it survives rotation only).
-- **Search** in the call list; per-day summaries for the rep.
-- **Tell the rep when a CRM conflict replaced their edit**, with the overwritten text to copy back.
-- **Review automatically created leads**: a list of them, with the company to fill in and an undo.
-- **Smarter "ask once"**: suggest a per-call answer when a saved-Personal number calls during work hours on the work SIM,
-  instead of following the saved answer silently.
-- **More OEM coverage** (Tecno, Infinix, Lava) and an in-app "test background reliability" check.
-- **Analytics without personal data** (counts of syncs/failures) to monitor reliability across devices.
+- **Login and token refresh**, one CRM account per user, and settings sent from the server.
+- **Connect to the company's real CRM** instead of the mock server.
+- **Put the CRM online with HTTPS**, so the app works on any phone without a laptop or cable.
+- **Remember answers for short codes** using the number as dialled.
+- **Keep the note draft** even if Android closes the app.
+- **Search** in the call list, and a daily summary.
+- **Tell the user when a CRM conflict replaced their edit**, with the old text to copy back.
+- **A list of auto-created leads** to review, fill in the company, or undo.
+- **Smarter asking:** suggest a different answer when a "Personal" number calls on the work SIM during work hours.
+- **More phone brands** (Tecno, Infinix, Lava) and an in-app "is background work reliable?" check.
+- **Usage counts without personal data** (number of uploads, failures) to watch reliability.

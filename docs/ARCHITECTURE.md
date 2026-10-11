@@ -1,18 +1,21 @@
 # Architecture
 
-Single Android module, **MVVM + Clean Architecture**, Hilt for DI, Coroutines/Flow throughout. The database (Room,
-encrypted with SQLCipher) is the **single source of truth**: screens only observe it, and everything that touches the
-network writes its result back into it.
+This page explains, in plain words, how Call Tracker is built.
+(The app shows "Professional"; inside the code and the CRM the same thing is called BUSINESS.)
 
-## Layers
+**In short:** one Android module, built with **MVVM + Clean Architecture**, **Hilt** for wiring parts together, and
+**Coroutines/Flow** for background work. The local database (Room, encrypted with SQLCipher) is the **one source of
+truth**: screens only show what is in the database, and anything that comes from the internet is saved there first.
+
+## How the code is split
 
 ```mermaid
 flowchart LR
-    subgraph UI["ui/  (Fragments, ViewModels, adapters)"]
+    subgraph UI["ui/  (screens, ViewModels, lists)"]
         L[Call activities] --- D[Call details + log form] --- Q[Sync queue] --- S[Settings · Number rules · About]
         N[Work call? notification · Classify dialog · after-call form]
     end
-    subgraph DOMAIN["domain/  (pure Kotlin)"]
+    subgraph DOMAIN["domain/  (plain Kotlin, the rules)"]
         UC[Use cases<br/>Sweep · Classify · SetClassification · SyncGate ·<br/>Reclassify · ResolveCrm · CreateLead · SaveLog · Upload]
         RI[Repository + requester interfaces]
         M[Models]
@@ -33,126 +36,132 @@ flowchart LR
     UC --> RI
 ```
 
-| Package | Responsibility | Rule |
+| Folder | What it holds | Rule |
 |---|---|---|
-| `domain/` | Models, repository **interfaces**, use cases (all business rules), small requester interfaces (`SyncRequester`, `CrmLookupRequester`, `CallPromptDismisser`) | No `android.*` imports → every rule is JVM-testable. Paging's core (`androidx.paging`) is pure Kotlin and allowed. |
-| `data/` | Room DAOs/entities, SQLCipher key, CallLog reader, Retrofit API + DTOs, repository implementations | Implements domain interfaces; never decides policy. |
-| `sync/` | `CoroutineWorker`s and their schedulers | Workers are thin: they call one use case and map the result to success/retry. |
-| `telephony/` | `PHONE_STATE` and boot receivers | Triggers only — they read no call data. |
-| `ui/` | Fragments (XML + ViewBinding), ViewModels (`StateFlow` state, `Channel` one-off events), notifications, the after-call activity | Observes Room; never shows network results directly. |
-| `di/` | Hilt modules (DB, network, dispatchers, application scope, interface bindings) | |
+| `domain/` | The data models, the **interfaces** for storage, and the use cases — every business rule lives here | No Android code at all, so every rule can be tested quickly on a computer |
+| `data/` | The database, the encryption key, the call history reader, the CRM API, and the code that implements the domain interfaces | Does the work, but never decides the rules |
+| `sync/` | Background jobs (WorkManager) and the code that schedules them | Each job is small: it calls one use case and reports done / try again |
+| `telephony/` | Listeners for "call ended" and "phone restarted" | They only wake the app up; they read no call data |
+| `ui/` | Screens (XML + ViewBinding), ViewModels, notifications, the after-call screen | Shows only what's in the database, never raw internet results |
+| `di/` | Hilt setup (database, network, threads, interface bindings) | |
 
-## The pipeline: from a phone call to the CRM
+## From a phone call to the CRM
 
-The product owner's call flow: **classify first, ask once per number, search the CRM only for professional calls.**
+The product owner's call flow: **decide on the phone first, ask once per number, search the CRM only for work calls.**
 
 ```mermaid
 flowchart TD
-    T1[PHONE_STATE → IDLE] --> SS
-    T2[CallLog content-URI trigger] --> SS
-    T3[Boot / app update / app open] --> SS
-    T4[Hourly safety net] --> SS
-    SS[SweepScheduler<br/>unique work] --> SW[CallLogSweepWorker → SweepCallLogUseCase]
-    SW -->|read rows past the watermark<br/>pages of 200, one transaction each| CLG[(Device CallLog)]
-    SW -->|normalise E.164, classify: saved answer → work SIM → Unsorted,<br/>store, SyncGate.reconcile, advance watermark| DB[(Room)]
+    T1[Call ended] --> SS
+    T2[Call history changed] --> SS
+    T3[Restart / app update / app opened] --> SS
+    T4[Hourly safety check] --> SS
+    SS[SweepScheduler<br/>one job at a time] --> SW[CallLogSweepWorker → SweepCallLogUseCase]
+    SW -->|read new calls since last time<br/>200 at a time, saved safely each time| CLG[(Phone's call history)]
+    SW -->|tidy the number, decide: saved answer → work SIM → Unsorted,<br/>save, update upload queue, remember where it stopped| DB[(Room)]
     SW --> CLW[CrmLookupWorker → ResolveCrmMatchesUseCase]
-    CLW -->|PROFESSIONAL numbers only, ≤50 per run, cache 24 h| CRM[(CRM API)]
-    CLW -->|found → link + re-send<br/>not found + phonebook name → create lead| DB
-    CLW --> PN{UNCLASSIFIED conversation,<br/>ended < 1 h ago?}
+    CLW -->|work numbers only, ≤50 per run, answer kept 24 h| CRM[(CRM API)]
+    CLW -->|found → link + re-send<br/>not found + contact name → create lead| DB
+    CLW --> PN{Unsorted call where people talked,<br/>ended < 1 h ago?}
     PN -->|yes, ≤ 3 showing| NOTIF[“Work call?” notification<br/>Professional / Personal / Log]
-    NOTIF -->|answer saved for the number<br/>SetCallClassificationUseCase| DB
+    NOTIF -->|answer saved for the number| DB
     UIX[Call details, Classify dialog, after-call form:<br/>classify · log · create lead · rules · work SIM] --> DB
-    DB -->|a Professional answer requests a lookup| CLW
-    DB -->|BUSINESS only, via SyncGate| OB[(Outbox)]
+    DB -->|a Professional answer starts a CRM search| CLW
+    DB -->|work calls only, through SyncGate| OB[(Upload queue)]
     OB --> SY[SyncWorker → UploadPendingActivitiesUseCase]
-    SY -->|batches ≤100, clientId = idempotency key,<br/>per-item results, generation-guarded| CRM
+    SY -->|up to 100 at a time, unique ID per call,<br/>a result per call, version-checked| CRM
 ```
 
-1. **Detection.** Every trigger only *schedules* a sweep; the sweep reads the **CallLog**, which is the source of truth
-   (it has the real type, duration and SIM; the `PHONE_STATE` broadcast doesn't). A watermark (`_ID` + date, plus a fixed
-   7-day floor) makes sweeps incremental, idempotent and crash-safe.
-2. **Classification first, from local signals only** (`ClassifyCallUseCase`): the number's saved answer (a number rule),
-   else the work SIM (Professional), else Unsorted. The CRM and saved phone contacts don't decide.
-3. **Ask once.** Only numbers with no saved answer, only conversations (incoming/outgoing), only within an hour, never more
-   than three prompts showing. Every answer — notification, Classify dialog, call screen — is saved for the number
-   (`applyToNumber = true`), and an answer clears the number's open prompts (`CallPromptDismisser`).
-4. **CRM, for professional calls only** (`ResolveCrmMatchesUseCase`): `numbersNeedingCrmLookup` lists BUSINESS numbers
-   only; a Professional answer requests a lookup at once (`CrmLookupRequester`). Found → the call is linked (and re-sent
-   if already uploaded). Not found → the lead is created from the phonebook name ("Create leads automatically", default
-   on), else Create lead is offered. Leads and Contacts are both checked first; the server's 409 links an existing record.
-5. **Outbox.** A BUSINESS call gets an activity (with a client UUID) and an outbox row; edits re-arm the row with a new
-   `generation`.
-6. **Upload.** Batches go to `POST /activities/batch`; each item's result is applied on its own, only if its generation
-   is unchanged since it was sent. A stale CRM link (record deleted/merged) is healed and looked up again at once.
+1. **Finding calls.** Every trigger only *asks* for a read; the read itself uses the phone's **call history (CallLog)**,
+   because it has the real type, length and SIM (the "call ended" signal doesn't). The app remembers where it stopped
+   (plus a fixed 7-day limit), so each read picks up only new calls, reading twice is harmless, and a crash loses nothing.
+2. **Deciding, using only what's on the phone** (`ClassifyCallUseCase`): the saved answer for the number, else the work
+   SIM (Professional), else Unsorted. The CRM and the phone's contacts don't decide.
+3. **Asking once.** Only for numbers with no saved answer, only for calls where people talked, only within an hour,
+   never more than three notifications at once. Every answer (notification, Classify dialog, call screen) is saved for
+   the number, and answering clears that number's other open notifications.
+4. **The CRM, for work calls only** (`ResolveCrmMatchesUseCase`): only work numbers are searched, and a Professional
+   answer starts a search straight away. Found → the call is linked (and re-sent if already uploaded). Not found → a
+   lead is created from the contact name ("Create leads automatically", on by default), or a Create lead button is
+   shown. Leads and Contacts are both searched first, and if the server says the lead already exists, that one is linked.
+5. **Upload queue.** A work call gets an activity (with its own unique ID) and a place in the queue. Any later edit
+   puts it back in the queue with a new version number.
+6. **Upload.** Calls are sent in batches; the server answers for each call separately, and an answer is used only if
+   the call hasn't changed since it was sent. If a CRM lead was deleted or merged, the link is fixed and the number is
+   searched again at once.
 
-## The privacy boundary
+## The privacy wall
 
 ```mermaid
 flowchart LR
     subgraph PHONE["Stays on the phone (encrypted)"]
-        ALL[All calls, contact names,<br/>PERSONAL + UNCLASSIFIED calls]
+        ALL[All calls, contact names,<br/>Personal + Unsorted calls]
     end
-    SG{{SyncGate.reconcile<br/>the ONLY way into the outbox}}
+    SG{{SyncGate.reconcile<br/>the ONLY way into the upload queue}}
     ALL --> SG
-    SG -->|BUSINESS only| OUT[(Outbox)]
-    OUT --> CHK{{Uploader re-checks BUSINESS<br/>builds ActivityPayload: contract fields only}}
+    SG -->|work calls only| OUT[(Upload queue)]
+    OUT --> CHK{{Uploader checks again it's a work call<br/>sends only the fields the CRM needs}}
     CHK --> NET[CRM]
-    ALL -. E.164 number, PROFESSIONAL numbers only .-> LOOK[CRM lookup]
-    ALL -. phonebook name, only to auto-create a lead<br/>for a professional number, setting on .-> LEAD[CRM new lead]
+    ALL -. number only, work numbers only .-> LOOK[CRM search]
+    ALL -. contact name, only to auto-create a lead<br/>for a work number, setting on .-> LEAD[CRM new lead]
 ```
 
-- `SyncGate.reconcile()` is the single caller of `OutboxRepository.enqueue`; every change to a call's classification
-  or log calls it **in the same transaction**, so classification and outbox can never disagree. A call that stops being
-  BUSINESS is removed from the outbox (unless already uploaded).
-- The uploader re-checks BUSINESS right before building the payload (defence in depth) and the payload type holds only
-  the API contract's fields — no contact names.
-- CRM lookups send only the E.164 number and only for numbers with a BUSINESS call; Personal and Unsorted numbers are
-  never looked up, and a number with a PERSONAL rule or a call marked personal by hand is excluded outright.
-- A phonebook name leaves the phone only as the name of an automatically created lead, for a professional number, with
-  the setting on.
-- Logs: counts, HTTP codes and exception types only (`LogHygieneTest`); release builds strip info logging.
+- **One door into the upload queue:** `SyncGate.reconcile()`. Every change to a call's type or notes goes through it
+  in the same database step, so the call and the queue can never disagree. A call that stops being a work call is
+  taken out of the queue (unless it was already uploaded).
+- **A second check:** just before sending, the uploader checks again that the call is a work call, and what it sends
+  holds only the fields the CRM needs — no contact names.
+- **CRM searches** send only the number, and only for work numbers. A number marked Personal (by a saved answer or by
+  hand on any of its calls) is never searched.
+- **A contact name** leaves the phone only as the name of an auto-created lead, for a work number, with the setting on.
+- **Logs** contain only counts, HTTP codes and error types (checked by `LogHygieneTest`); release builds remove most logs.
 
-## Background work
+## Background jobs
 
-All background work is **WorkManager** (`CoroutineWorker`), always **unique work**, no long-running services.
+All background work uses **WorkManager**, always as a single named job (never two copies at once), with no
+always-running service.
 
-| Worker | Started by | Constraints / policy | Does |
+| Job | Started by | How it runs | What it does |
 |---|---|---|---|
-| `CallLogSweepWorker` | PHONE_STATE idle (+3 s), boot, app update, app open, content trigger, hourly periodic | unique `APPEND_OR_REPLACE`; periodic `KEEP` | Imports new CallLog rows; schedules CRM lookup |
-| `CallLogChangedWorker` | Content-URI trigger on `CallLog.Calls.CONTENT_URI` (re-armed after every sweep) | unique `REPLACE` | Requests a sweep (catches calls even when PHONE_STATE was suppressed) |
-| `CrmLookupWorker` | After a sweep that imported calls (no network constraint, so prompts aren't delayed); a Professional answer, rule or work-SIM change, or a healed stale link (retry work, `CONNECTED`) | `APPEND_OR_REPLACE` / retry `REPLACE` (a new request restarts the backoff), exponential backoff | Looks up professional numbers, links calls, auto-creates leads; posts "Work call?" prompts (≤ 3 showing) and offers the log form |
-| `SyncWorker` | Every enqueue (5 s debounce), app start, hourly periodic; **Upload now** on the Sync queue | `CONNECTED`, exponential backoff 30 s; `APPEND_OR_REPLACE` (Upload now: `REPLACE`) | Uploads the outbox |
+| `CallLogSweepWorker` | Call ended (+3 s), restart, app update, app opened, call history changed, every hour | A new request joins or replaces the waiting one; the hourly job is kept | Reads new calls; starts the CRM search |
+| `CallLogChangedWorker` | Any change to the call history (set up again after every read) | Replaces the waiting one | Asks for a read — catches calls even if the "call ended" signal was blocked |
+| `CrmLookupWorker` | After a read that found calls (runs even offline, so notifications aren't late); a Professional answer, rule or work-SIM change; a fixed CRM link (retry job, needs internet) | Joins or replaces; retries wait longer each time | Searches work numbers, links calls, creates leads; shows "Work call?" notifications (≤ 3) and offers the log form |
+| `SyncWorker` | Anything added to the queue (5 s wait), app start, every hour, **Upload now** | Needs internet; retries after 30 s, then doubling | Uploads the queue |
 
 ## Storage
 
-Room database `calltracker.db` (schema v3), **encrypted with SQLCipher**; the 256-bit key is random, generated once, and
-stored wrapped (AES-GCM) by a non-exportable Android Keystore key. If the Keystore key is lost, a new database is created
-and calls are re-read from the CallLog. Backups and device transfer exclude it (`allowBackup=false`).
+The database `calltracker.db` (version 3) is **encrypted with SQLCipher**. Its key is random, made once, and locked by
+the phone's secure key store (Android Keystore), so it can't be copied out. If that key is ever lost, a new database is
+made and the calls are read again from the call history. The database is never backed up or moved to a new phone.
 
-| Table | Holds |
+| Table | What it holds |
 |---|---|
-| `calls` | One row per imported CallLog row (unique on CallLog id + start), normalised number, type, times, SIM, classification + its source, linked CRM record |
-| `activities` | The CRM activity of a BUSINESS call: client UUID (idempotency key), log fields, `updated_at`, server id/version |
-| `outbox` | One row per activity to upload: status, `generation`, attempts, last error |
-| `number_rules` | The **saved answer** per number (Professional or Personal): every user answer, plus Number rules entries |
-| `crm_cache` | Last CRM answer per number (including "not in CRM") with its time |
-| `sweep_state` | The CallLog watermark and the 7-day floor |
+| `calls` | One row per call from the call history: tidied number, type, times, SIM, work/personal and how it was decided, linked CRM lead or contact |
+| `activities` | The CRM record for a work call: its unique ID, notes and other log fields, last edit time, server ID |
+| `outbox` | The upload queue: one row per activity, with status, version number, tries and last error |
+| `number_rules` | The **saved answer** for each number (Professional or Personal) |
+| `crm_cache` | The CRM's last answer for each number (including "not in CRM") and when it was asked |
+| `sweep_state` | Where the last call history read stopped, and the 7-day limit |
 
-Settings (work SIM, create leads automatically, dismissed hints) are in plain `SharedPreferences` — nothing sensitive,
-and readable before the database is opened. Schema history: `app/schemas/`; migrations in `data/local/Migrations.kt`
-(v2 → v3 turns calls the CRM or a saved contact used to decide into saved answers, so nothing flips on upgrade).
+Settings (work SIM, create leads automatically, dismissed tips) are kept in plain `SharedPreferences`: nothing private
+is there, and they can be read before the database opens. Old database versions are in `app/schemas/`; upgrades are in
+`data/local/Migrations.kt` (going from version 2 to 3 turns earlier CRM/contact decisions into saved answers, so
+nothing changes for the user on upgrade).
 
 ## Screens
 
-Single activity (`MainActivity` implements `AppNavigator`) with plain fragment transactions; a handful of screens didn't
-justify a navigation library. A side menu (on the list only) opens: **Call activities** (paged from Room; All /
-Professional / Personal / Unsorted tabs filter in SQL; a "waiting to upload" banner opens the Sync queue; no toolbar
-actions) → **Call details** (classify, CRM record, log form, create lead, upload status) · **Sync queue** (Pending /
-Failed / Synced tabs, offline banner, Upload now) · **Number rules** (saved answers) · **Settings** (work SIM,
-notifications, after-call screen, create leads automatically, battery/OEM guidance, privacy) · **Why this approach?**
-Dialogs that return data are `DialogFragment`s with the Fragment Result API: Classify call (opened from a "Work call?"
-notification), Create new lead and Call saved (full screen, `ui/common/FullScreenDialogFragment`). The after-call form
-(`PostCallActivity`) pops up over other apps after a professional call, or opens from the notification's Professional
-button; it offers Create lead for unknown numbers.
-Look and feel: blue app bar, colour tokens in `values/colors.xml` + `values-night/colors.xml`, shared avatars and
-pills in `ui/common/CallVisuals`. The UI says **Professional** for `Classification.BUSINESS`; code and the CRM keep BUSINESS.
+One activity (`MainActivity`) switches between screens with plain fragment changes — too few screens to need a
+navigation library. A side menu opens:
+- **Call activities** — the call list, loaded page by page; All / Professional / Personal / Unsorted tabs; a "waiting
+  to upload" banner opens the Sync queue.
+- **Call details** — classify, CRM record, log form, create lead, upload status.
+- **Sync queue** — Pending / Failed / Synced tabs, offline banner, Upload now.
+- **Number rules** — the saved answers.
+- **Settings** — work SIM, notifications, after-call screen, create leads automatically, battery tips, privacy.
+- **Why this approach?**
+
+Pop-ups that return an answer (Classify call, Create new lead, Call saved) are `DialogFragment`s using the Fragment
+Result API, so they survive rotating the screen. The after-call form (`PostCallActivity`) appears over other apps after
+a work call, or from the notification's Professional button, and offers Create lead for unknown numbers.
+
+Look and feel: blue top bar; all colours are tokens in `values/colors.xml` and `values-night/colors.xml` (so dark mode
+works everywhere); shared avatars and labels come from `ui/common/CallVisuals`.
