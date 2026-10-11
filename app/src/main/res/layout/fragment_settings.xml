@@ -336,15 +336,18 @@
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
+        <!-- "Why this approach?" is kept in code but hidden from the app; set both views to visible to bring it back. -->
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="56dp" />
+            android:layout_marginStart="56dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/aboutRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:background="?attr/selectableItemBackground"
             android:drawablePadding="16dp"
             android:gravity="center_vertical"

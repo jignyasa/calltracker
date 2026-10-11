@@ -157,7 +157,8 @@ navigation library. A side menu opens:
 - **Sync queue** — Pending / Failed / Synced tabs, offline banner, Upload now.
 - **Number rules** — the saved answers.
 - **Settings** — work SIM, notifications, after-call screen, create leads automatically, battery tips, privacy.
-- **Why this approach?**
+- **Why this approach?** — still in the code (`ui/about/AboutFragment`) but hidden: its side-menu item and Settings row
+  are set to invisible.
 
 Pop-ups that return an answer (Classify call, Create new lead, Call saved) are `DialogFragment`s using the Fragment
 Result API, so they survive rotating the screen. The after-call form (`PostCallActivity`) appears over other apps after
