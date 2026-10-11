@@ -105,7 +105,7 @@ cd mock-server && npm test              # 16 mock API tests
 
 Details, the device test plan and results: [docs/TESTING.md](docs/TESTING.md).
 
-## Deliverables (from the assignment)
+## Deliverables 
 
 | Asked for | Where |
 |---|---|
